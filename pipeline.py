@@ -276,6 +276,7 @@ def run(audio_path: str):
     base_name = os.path.splitext(audio_path)[0]
     transcript_path = f"{base_name}_transcript.json"
     analysis_path = f"{base_name}_analysis.md"
+    analysis_json_path = f"{base_name}_analysis_data.json"
 
     print(f"\n{'='*60}")
     print(f"Pipeline: {os.path.basename(audio_path)}")
@@ -283,28 +284,37 @@ def run(audio_path: str):
 
     # Step 1: 转写（如果已有 transcript 则跳过）
     if os.path.exists(transcript_path):
-        print(f"\n[1/2] 转写 — 已存在，跳过: {os.path.basename(transcript_path)}")
+        print(f"\n[1/3] 转写 — 已存在，跳过: {os.path.basename(transcript_path)}")
         with open(transcript_path, "r", encoding="utf-8") as f:
             transcript_data = json.load(f)
     else:
-        print(f"\n[1/2] 转写 — 开始")
+        print(f"\n[1/3] 转写 — 开始")
         transcript_data = transcribe(audio_path)
         with open(transcript_path, "w", encoding="utf-8") as f:
             json.dump(transcript_data, f, ensure_ascii=False, indent=2)
         print(f"  已保存: {os.path.basename(transcript_path)}")
 
     # Step 2: 分析
-    print(f"\n[2/2] AI 分析")
+    print(f"\n[2/3] AI 分析")
     transcript_text = format_transcript(transcript_data)
     report = analyze(transcript_text)
     with open(analysis_path, "w", encoding="utf-8") as f:
         f.write(report)
     print(f"  已保存: {os.path.basename(analysis_path)}")
 
+    # Step 3: 转换为结构化JSON
+    print(f"\n[3/3] 转换为结构化 JSON")
+    from convert_to_json import convert_md_to_json
+    data = convert_md_to_json(report)
+    with open(analysis_json_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    print(f"  已保存: {os.path.basename(analysis_json_path)}")
+
     print(f"\n{'='*60}")
     print(f"完成! 输出文件:")
     print(f"  转写: {transcript_path}")
     print(f"  分析: {analysis_path}")
+    print(f"  JSON: {analysis_json_path}")
     print(f"{'='*60}\n")
 
 
