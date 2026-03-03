@@ -9,6 +9,7 @@ export default function App() {
   const [view, setView] = useState<View>('list');
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [selectedReport, setSelectedReport] = useState<AnalysisReport | null>(null);
+  const [selectedReportName, setSelectedReportName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,6 +43,7 @@ export default function App() {
       .then(res => res.json())
       .then(data => {
         setSelectedReport(data);
+        setSelectedReportName(name);
         setView('report');
         setLoading(false);
       })
@@ -87,7 +89,8 @@ export default function App() {
     return (
       <Report
         data={selectedReport}
-        onBack={() => { setSelectedReport(null); setView('list'); }}
+        reportName={selectedReportName ?? undefined}
+        onBack={() => { setSelectedReport(null); setSelectedReportName(null); setView('list'); }}
       />
     );
   }

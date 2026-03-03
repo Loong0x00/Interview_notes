@@ -100,6 +100,13 @@ export interface AnalysisReport {
   candidateSummary: CandidateSummary;
 }
 
+export interface TranscriptSegment {
+  speaker: string;
+  start_ms: number;
+  end_ms: number;
+  text: string;
+}
+
 // API response types
 export interface ReportListItem {
   name: string;        // file base name, e.g. "小米创新AI产品经理"

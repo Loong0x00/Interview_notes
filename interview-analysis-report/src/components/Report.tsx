@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import {
   User,
@@ -10,9 +10,11 @@ import {
   CheckCircle2,
   Search,
   Brain,
-  Briefcase
+  Briefcase,
+  MessageCircle
 } from 'lucide-react';
-import type { AnalysisReport, DialogueStep } from '../types';
+import type { AnalysisReport, DialogueStep, TranscriptSegment } from '../types';
+import TranscriptChat from './TranscriptChat';
 
 // --- Types ---
 
@@ -218,13 +220,49 @@ function getFocusLevelBadgeColor(level: string): "blue" | "green" | "amber" | "r
 
 interface ReportProps {
   data: AnalysisReport;
+  reportName?: string;
   onBack?: () => void;
 }
 
-export default function Report({ data, onBack }: ReportProps) {
+export default function Report({ data, reportName, onBack }: ReportProps) {
   const { meta, basicInfo, questions, questionStats, dialogueChains, focusMap, candidateSummary } = data;
 
   const [questionFilter, setQuestionFilter] = useState<'全部' | '预设' | '追问' | '澄清'>('全部');
+  const [transcript, setTranscript] = useState<TranscriptSegment[]>([]);
+  const [transcriptLoading, setTranscriptLoading] = useState(false);
+  const [activeSegmentIndex, setActiveSegmentIndex] = useState<number | null>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  const interviewerSpeaker = useMemo(() => {
+    const role = basicInfo.roles.find(r => r.role === '面试官');
+    if (!role) return '2';
+    return role.speaker.replace(/\D/g, '');
+  }, [basicInfo.roles]);
+
+  useEffect(() => {
+    if (!reportName) return;
+    setTranscriptLoading(true);
+    fetch(`/api/reports/${encodeURIComponent(reportName)}/transcript`)
+      .then(res => res.ok ? res.json() : [])
+      .then((segments: TranscriptSegment[]) => setTranscript(segments))
+      .catch(() => setTranscript([]))
+      .finally(() => setTranscriptLoading(false));
+  }, [reportName]);
+
+  const handleQuestionClick = (timestamp?: string) => {
+    if (!timestamp || transcript.length === 0) return;
+    const ms = parseFloat(timestamp.replace('s', '')) * 1000;
+    let bestIdx = 0;
+    let bestDiff = Infinity;
+    transcript.forEach((seg, i) => {
+      const diff = Math.abs(seg.start_ms - ms);
+      if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+    });
+    setActiveSegmentIndex(bestIdx);
+    const el = document.getElementById(`transcript-seg-${bestIdx}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => setActiveSegmentIndex(null), 3000);
+  };
 
   // Sort questions by id (Q1, Q2, Q3...) to ensure chronological order
   const sortedQuestions = [...questions].sort((a, b) => {
@@ -405,22 +443,66 @@ export default function Report({ data, onBack }: ReportProps) {
                   </button>
                 ))}
               </div>
-              <Card>
-                <Table
-                  headers={['编号', '问题文本', '类型']}
-                  rows={filteredQuestions.map(q => [
-                    q.id,
-                    q.text,
-                    <Badge color={getQuestionBadgeColor(q.type)}>{q.type}</Badge>,
-                  ])}
-                />
-                <div className="bg-zinc-50 p-4 border-t border-zinc-100 flex gap-4 text-sm text-zinc-600">
-                  <span className="font-medium">统计：</span>
-                  <span>预设问题: {questionStats.preset}</span>
-                  <span>追问: {questionStats.followUp}</span>
-                  <span>澄清: {questionStats.clarification}</span>
-                </div>
-              </Card>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                {/* Left: Question table */}
+                <Card>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="text-xs text-zinc-500 uppercase bg-zinc-50 border-b border-zinc-200">
+                        <tr>
+                          <th className="px-6 py-3 font-medium tracking-wider">编号</th>
+                          <th className="px-6 py-3 font-medium tracking-wider">问题文本</th>
+                          <th className="px-6 py-3 font-medium tracking-wider">类型</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100">
+                        {filteredQuestions.map((q, i) => (
+                          <tr
+                            key={i}
+                            onClick={() => q.timestamp && handleQuestionClick(q.timestamp)}
+                            className={`transition-colors ${q.timestamp ? 'cursor-pointer hover:bg-indigo-50/60' : 'hover:bg-zinc-50/50'}`}
+                          >
+                            <td className="px-6 py-4 text-zinc-700 whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                {q.id}
+                                {q.timestamp && <span className="text-[10px] font-mono text-zinc-400">{q.timestamp}</span>}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-zinc-700 whitespace-pre-wrap">{q.text}</td>
+                            <td className="px-6 py-4 text-zinc-700 whitespace-nowrap">
+                              <Badge color={getQuestionBadgeColor(q.type)}>{q.type}</Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="bg-zinc-50 p-4 border-t border-zinc-100 flex gap-4 text-sm text-zinc-600">
+                    <span className="font-medium">统计：</span>
+                    <span>预设问题: {questionStats.preset}</span>
+                    <span>追问: {questionStats.followUp}</span>
+                    <span>澄清: {questionStats.clarification}</span>
+                  </div>
+                </Card>
+
+                {/* Right: Transcript chat */}
+                <Card>
+                  <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MessageCircle size={16} className="text-zinc-500" />
+                      <h3 className="font-semibold text-zinc-900">转写全文</h3>
+                    </div>
+                    <span className="text-xs text-zinc-400">{transcript.length} 条对话</span>
+                  </div>
+                  <TranscriptChat
+                    segments={transcript}
+                    interviewerSpeaker={interviewerSpeaker}
+                    activeSegmentIndex={activeSegmentIndex}
+                    loading={transcriptLoading}
+                    containerRef={chatContainerRef}
+                  />
+                </Card>
+              </div>
             </Section>
 
             {/* 4. Dialogue Chains */}

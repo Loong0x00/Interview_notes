@@ -102,6 +102,17 @@ app.get("/api/reports/:name", (req, res) => {
   res.json(data);
 });
 
+// GET /api/reports/:name/transcript - get transcript data
+app.get("/api/reports/:name/transcript", (req, res) => {
+  const filePath = path.join(DATA_DIR, `${req.params.name}_transcript.json`);
+  if (!fs.existsSync(filePath)) {
+    res.status(404).json({ error: "Transcript not found" });
+    return;
+  }
+  const raw = fs.readFileSync(filePath, "utf-8");
+  res.json(JSON.parse(raw));
+});
+
 // POST /api/convert - convert markdown to JSON
 app.post("/api/convert", async (req, res) => {
   try {
