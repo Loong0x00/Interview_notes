@@ -32,7 +32,8 @@
 XFYUN_APP_ID      # 讯飞 APPID
 XFYUN_API_KEY      # 讯飞 APIKey（accessKeyId）
 XFYUN_API_SECRET   # 讯飞 APISecret（签名密钥）
-ZHIPU_API_KEY      # 智谱 GLM-4.7 API Key
+ZHIPU_API_KEY      # 智谱 GLM-4.7 API Key（余额不足，暂不可用）
+DASHSCOPE_API_KEY  # 阿里云百炼 API Key（qwen 系列，有免费额度）
 ```
 
 ---
@@ -102,8 +103,7 @@ st.rl → 说话人编号（"1" 或 "2"）
 | `讯飞语音转写API调用说明.md` | 完整 API 文档（含两个版本） |
 | `小米创新AI产品经理.m4a` | 示例面试录音（约25分钟，双人对话） |
 | `小米创新AI产品经理_transcript.json` | 对应转写结果（结构化 JSON） |
-| `analyze.py` | （待实现）AI 分析脚本 |
-| `*_analysis.json` | （待实现）分析输出 JSON |
+| `analyze.py` | AI 分析脚本（阿里云百炼 qwen-plus） |
 | `*_analysis.md` | 分析输出 Markdown 报告 |
 | `config.py` | 敏感凭证（gitignore，不入库） |
 | `.gitignore` | Git 忽略规则 |
@@ -214,34 +214,35 @@ ASR 只给 `"1"` / `"2"`，需要 AI 判断谁是面试官、谁是候选人。
 
 ### 技术方案
 
-- **分析模型**：智谱 GLM-4.7（200K 上下文，128K 输出）
-- 对话文本较长（~25分钟 ≈ 8000 字），GLM-4.7 的 200K 上下文完全够用
-- Prompt 策略：先做角色识别 + 问题提取，再做链式分析，最后生成标注
-- 支持批量处理多个面试录音文件
+- **分析模型**：阿里云百炼 qwen-plus（OpenAI SDK 兼容）
+- 对话文本（~25分钟 ≈ 8000 token 输入），qwen-plus 完全够用
+- Prompt 策略：system prompt 定义 5 步分析框架 + 输出格式，一次调用完成全部分析
+- 支持批量处理：`python analyze.py` 自动扫描所有 `*_transcript.json`
+- 实测 token 用量：输入 ~8600 + 输出 ~3400 = ~12000 总计
 
-### GLM-4.7 调用方式
+### 阿里云百炼调用方式
 
-通过 OpenAI SDK 兼容接口调用（最简方式）：
+通过 OpenAI SDK 兼容接口：
 
 ```python
 from openai import OpenAI
-from config import ZHIPU_API_KEY
+from config import DASHSCOPE_API_KEY
 
 client = OpenAI(
-    api_key=ZHIPU_API_KEY,
-    base_url="https://open.bigmodel.cn/api/paas/v4/"
+    api_key=DASHSCOPE_API_KEY,
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
 )
 
 response = client.chat.completions.create(
-    model="glm-4.7",
-    messages=[{"role": "user", "content": "..."}]
+    model="qwen-plus",
+    messages=[{"role": "user", "content": "..."}],
+    temperature=0.3,
+    max_tokens=16000,
 )
 ```
 
-注意事项：
-- `temperature` 范围 `(0, 1)`，不能设为 0
-- 支持 `thinking` 模式（深度推理）：`thinking={"type": "enabled"}`
-- 安装依赖：`pip install openai`
+可用模型：`qwen-plus`（推荐）、`qwen-turbo`（快速）、`qwen-max`（最强）
+安装依赖：`pip install openai`
 
 ---
 
