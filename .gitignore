@@ -1,23 +1,20 @@
-# 敏感配置
-config.py
-
-# 音频文件（太大）
-*.m4a
-*.mp3
-*.wav
-*.flac
-
-# 日志
-logs/
-
-# Python
-__pycache__/
-*.pyc
+# 归档（Python 旧脚本、文档、音频）
+archive/
 
 # SQLite 数据库
 *.db
 *.db-shm
 *.db-wal
+
+# 上传临时文件
+uploads/
+
+# 日志
+logs/
+
+# Python 缓存
+__pycache__/
+*.pyc
 
 # 系统
 .DS_Store
