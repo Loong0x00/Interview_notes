@@ -4,6 +4,7 @@ import { fileURLToPath } from "url";
 import { transcribe, type TranscriptSegment } from "./transcribe.js";
 import { formatTranscript, analyze } from "./analyze.js";
 import { convertMdToJson } from "./convert.js";
+import { registerReport } from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,6 +25,7 @@ export interface PipelineJob {
   status: JobStatus;
   progress: string;
   createdAt: number;
+  userId?: number;
   result?: string; // report name for loading
   error?: string;
 }
@@ -38,8 +40,12 @@ export function getJob(id: string): PipelineJob | undefined {
   return jobs.get(id);
 }
 
-export function getAllJobs(): PipelineJob[] {
-  return Array.from(jobs.values()).sort((a, b) => b.createdAt - a.createdAt);
+export function getAllJobs(userId?: number): PipelineJob[] {
+  let all = Array.from(jobs.values());
+  if (userId !== undefined) {
+    all = all.filter((j) => j.userId === userId);
+  }
+  return all.sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export function addJobListener(jobId: string, listener: ProgressListener): () => void {
@@ -62,7 +68,7 @@ function updateJob(job: PipelineJob) {
   }
 }
 
-export function startPipeline(audioPath: string, originalFileName: string): string {
+export function startPipeline(audioPath: string, originalFileName: string, userId?: number): string {
   const id = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const job: PipelineJob = {
     id,
@@ -70,6 +76,7 @@ export function startPipeline(audioPath: string, originalFileName: string): stri
     status: "uploading",
     progress: "准备中...",
     createdAt: Date.now(),
+    userId,
   };
   jobs.set(id, job);
 
@@ -132,6 +139,11 @@ async function runPipeline(
     const jsonData = await convertMdToJson(report);
     fs.writeFileSync(analysisJsonPath, JSON.stringify(jsonData, null, 2), "utf-8");
     console.log(`[Pipeline] Saved JSON: ${analysisJsonPath}`);
+
+    // Register report ownership
+    if (job.userId) {
+      registerReport(job.userId, baseName);
+    }
 
     // Done
     job.status = "done";

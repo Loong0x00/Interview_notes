@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from "react";
 import { Upload, FileAudio, CheckCircle, AlertCircle, Loader } from "lucide-react";
+import { useAuth } from '../contexts/AuthContext';
 
 interface UploadPageProps {
   onComplete: (reportName: string) => void;
@@ -37,6 +38,7 @@ function formatSize(bytes: number): string {
 }
 
 export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
+  const { authFetch } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -84,7 +86,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
       const formData = new FormData();
       formData.append("audio", file);
 
-      const res = await fetch("/api/pipeline/start", {
+      const res = await authFetch("/api/pipeline/start", {
         method: "POST",
         body: formData,
       });
@@ -97,8 +99,9 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
       const { jobId } = await res.json();
       setJob({ id: jobId, status: "uploading", progress: "已提交..." });
 
-      // Start SSE connection
-      const evtSource = new EventSource(`/api/pipeline/events/${jobId}`);
+      // Start SSE connection (EventSource doesn't support custom headers, pass token as query param)
+      const token = localStorage.getItem('interview_auth_token') || '';
+      const evtSource = new EventSource(`/api/pipeline/events/${jobId}?token=${encodeURIComponent(token)}`);
 
       evtSource.onmessage = (event) => {
         const data: JobState = JSON.parse(event.data);
@@ -129,7 +132,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
       });
       setUploading(false);
     }
-  }, [file, onComplete]);
+  }, [file, onComplete, authFetch]);
 
   const stepIndex = job ? getStepIndex(job.status) : -2;
 
