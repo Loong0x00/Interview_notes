@@ -52,7 +52,7 @@ const Badge = ({ children, color = "blue" }: { children: React.ReactNode; color?
     zinc: "bg-zinc-100 text-zinc-700 border-zinc-200",
   };
   return (
-    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${colors[color]}`}>
+    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${colors[color]}`}>
       {children}
     </span>
   );
@@ -72,7 +72,7 @@ const Table = ({ headers, rows, className = "" }: TableProps) => (
         {rows.map((row, i) => (
           <tr key={i} className="hover:bg-zinc-50/50 transition-colors">
             {row.map((cell, j) => (
-              <td key={j} className="px-6 py-4 text-zinc-700 whitespace-pre-wrap">{cell}</td>
+              <td key={j} className={`px-6 py-4 text-zinc-700 ${j === row.length - 1 ? 'whitespace-pre-wrap' : 'whitespace-nowrap'}`}>{cell}</td>
             ))}
           </tr>
         ))}
