@@ -110,3 +110,22 @@ export interface ReportListItem {
 export interface ApiReportListResponse {
   reports: ReportListItem[];
 }
+
+// Pipeline job types
+export type PipelineJobStatus =
+  | "uploading"
+  | "transcribing"
+  | "analyzing"
+  | "converting"
+  | "done"
+  | "error";
+
+export interface PipelineJob {
+  id: string;
+  fileName: string;
+  status: PipelineJobStatus;
+  progress: string;
+  createdAt: number;
+  result?: string;
+  error?: string;
+}
