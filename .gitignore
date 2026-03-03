@@ -1,3 +1,6 @@
+# 数据文件（报告、转写）
+data/
+
 # 归档（Python 旧脚本、文档、音频）
 archive/
 
@@ -15,6 +18,9 @@ logs/
 # Python 缓存
 __pycache__/
 *.pyc
+
+# 项目说明（仅本地）
+CLAUDE.md
 
 # 系统
 .DS_Store
