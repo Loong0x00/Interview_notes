@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
 import {
   User,
@@ -98,6 +98,48 @@ const Section = ({ title, icon, children, id }: SectionProps) => (
   </section>
 );
 
+const ANSWER_TRUNCATE_LINES = 3;
+const ANSWER_LINE_HEIGHT = 1.625; // leading-relaxed = 1.625
+const ANSWER_FONT_SIZE = 14; // text-sm = 14px
+const ANSWER_MAX_COLLAPSED_HEIGHT = ANSWER_TRUNCATE_LINES * ANSWER_LINE_HEIGHT * ANSWER_FONT_SIZE;
+
+const CollapsibleAnswer: React.FC<{ content: string }> = ({ content }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [needsTruncation, setNeedsTruncation] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (contentRef.current) {
+      setNeedsTruncation(contentRef.current.scrollHeight > ANSWER_MAX_COLLAPSED_HEIGHT + 10);
+    }
+  }, [content]);
+
+  return (
+    <div>
+      <motion.div
+        ref={contentRef}
+        initial={false}
+        animate={{ height: expanded || !needsTruncation ? 'auto' : ANSWER_MAX_COLLAPSED_HEIGHT }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+        className="text-sm leading-relaxed text-zinc-700 overflow-hidden relative"
+      >
+        {content}
+        {!expanded && needsTruncation && (
+          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent" />
+        )}
+      </motion.div>
+      {needsTruncation && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="mt-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+        >
+          {expanded ? '收起' : '展开查看完整回答'}
+        </button>
+      )}
+    </div>
+  );
+};
+
 const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({ title, steps }) => (
   <Card className="mb-6">
     <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 flex justify-between items-center">
@@ -139,9 +181,13 @@ const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({
                 {step.time && <span className="text-xs text-zinc-400 font-mono">{step.time}</span>}
               </div>
 
-              <div className={`text-sm leading-relaxed ${step.type === 'trigger' ? 'font-mono text-amber-700 bg-amber-50 p-2 rounded border border-amber-100 inline-block' : 'text-zinc-700'}`}>
-                {step.content}
-              </div>
+              {step.type === 'answer' ? (
+                <CollapsibleAnswer content={step.content} />
+              ) : (
+                <div className={`text-sm leading-relaxed ${step.type === 'trigger' ? 'font-mono text-amber-700 bg-amber-50 p-2 rounded border border-amber-100 inline-block' : 'text-zinc-700'}`}>
+                  {step.content}
+                </div>
+              )}
             </div>
           </motion.div>
         ))}
@@ -178,6 +224,19 @@ interface ReportProps {
 export default function Report({ data, onBack }: ReportProps) {
   const { meta, basicInfo, questions, questionStats, dialogueChains, focusMap, candidateSummary } = data;
 
+  const [questionFilter, setQuestionFilter] = useState<'全部' | '预设' | '追问' | '澄清'>('全部');
+
+  // Sort questions by id (Q1, Q2, Q3...) to ensure chronological order
+  const sortedQuestions = [...questions].sort((a, b) => {
+    const numA = parseInt(a.id.replace(/\D/g, ''), 10) || 0;
+    const numB = parseInt(b.id.replace(/\D/g, ''), 10) || 0;
+    return numA - numB;
+  });
+
+  const filteredQuestions = questionFilter === '全部'
+    ? sortedQuestions
+    : sortedQuestions.filter(q => q.type === questionFilter);
+
   // Find the top two insights for the highlight cards
   const topInsight = focusMap.insights.find(i => i.level.includes('极高'));
   const secondInsight = focusMap.insights.find(i => i.level.includes('高') && !i.level.includes('极高'));
@@ -213,11 +272,11 @@ export default function Report({ data, onBack }: ReportProps) {
           <aside className="hidden lg:block lg:col-span-3">
             <nav className="sticky top-24 space-y-1">
               {[
-                { id: 'basic-info', label: '一、基本信息', icon: User },
-                { id: 'questions', label: '二、面试官问题列表', icon: MessageSquare },
-                { id: 'chains', label: '三、对话链分析', icon: TrendingUp },
-                { id: 'focus', label: '四、面试官关注图谱', icon: Target },
-                { id: 'summary', label: '五、候选人表现摘要', icon: CheckCircle2 },
+                { id: 'summary', label: '一、候选人表现摘要', icon: CheckCircle2 },
+                { id: 'basic-info', label: '二、基本信息', icon: User },
+                { id: 'questions', label: '三、面试官问题列表', icon: MessageSquare },
+                { id: 'chains', label: '四、对话链分析', icon: TrendingUp },
+                { id: 'focus', label: '五、面试官关注图谱', icon: Target },
               ].map((item) => (
                 <a
                   key={item.id}
@@ -234,8 +293,59 @@ export default function Report({ data, onBack }: ReportProps) {
           {/* Main Content */}
           <main className="lg:col-span-9 space-y-12">
 
-            {/* 1. Basic Info */}
-            <Section id="basic-info" title="一、基本信息" icon={<User size={20} />}>
+            {/* 1. Candidate Summary */}
+            <Section id="summary" title="一、候选人表现摘要" icon={<CheckCircle2 size={20} />}>
+              <div className="space-y-6">
+                <Card>
+                  <div className="px-6 py-4 border-b border-zinc-100 font-semibold text-zinc-900 flex items-center gap-2">
+                    <Briefcase size={18} className="text-zinc-500" /> 关键背景
+                  </div>
+                  <Table
+                    headers={['项目', '内容']}
+                    rows={candidateSummary.background.map(b => [b.label, b.content])}
+                  />
+                </Card>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card>
+                    <div className="px-6 py-4 border-b border-zinc-100 font-semibold text-zinc-900 flex items-center gap-2">
+                      <Brain size={18} className="text-zinc-500" /> 展现能力
+                    </div>
+                    <div className="p-6 space-y-4">
+                      {candidateSummary.abilities.map((item, i) => (
+                        <div key={i} className="flex gap-3">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0" />
+                          <div>
+                            <span className="font-semibold text-zinc-900 text-sm">{item.label}：</span>
+                            <span className="text-zinc-600 text-sm">{item.description}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+
+                  <Card>
+                    <div className="px-6 py-4 border-b border-zinc-100 font-semibold text-zinc-900 flex items-center gap-2">
+                      <AlertTriangle size={18} className="text-zinc-500" /> 潜在风险
+                    </div>
+                    <div className="p-6 space-y-4">
+                      {candidateSummary.risks.map((item, i) => (
+                        <div key={i} className="flex gap-3">
+                          <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 shrink-0" />
+                          <div>
+                            <span className="font-semibold text-zinc-900 text-sm">{item.label}：</span>
+                            <span className="text-zinc-600 text-sm">{item.description}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                </div>
+              </div>
+            </Section>
+
+            {/* 2. Basic Info */}
+            <Section id="basic-info" title="二、基本信息" icon={<User size={20} />}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card>
                   <div className="px-6 py-4 border-b border-zinc-100 font-semibold text-zinc-900">角色识别</div>
@@ -273,12 +383,32 @@ export default function Report({ data, onBack }: ReportProps) {
               </div>
             </Section>
 
-            {/* 2. Questions List */}
-            <Section id="questions" title="二、面试官问题列表" icon={<MessageSquare size={20} />}>
+            {/* 3. Questions List */}
+            <Section id="questions" title="三、面试官问题列表" icon={<MessageSquare size={20} />}>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {(['全部', '预设', '追问', '澄清'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setQuestionFilter(tab)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                      questionFilter === tab
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                        : 'bg-white text-zinc-600 border-zinc-200 hover:border-indigo-300 hover:text-indigo-600'
+                    }`}
+                  >
+                    {tab}
+                    {tab !== '全部' && (
+                      <span className="ml-1 opacity-70">
+                        {tab === '预设' ? questionStats.preset : tab === '追问' ? questionStats.followUp : questionStats.clarification}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
               <Card>
                 <Table
                   headers={['编号', '问题文本', '类型']}
-                  rows={questions.map(q => [
+                  rows={filteredQuestions.map(q => [
                     q.id,
                     q.text,
                     <Badge color={getQuestionBadgeColor(q.type)}>{q.type}</Badge>,
@@ -293,8 +423,8 @@ export default function Report({ data, onBack }: ReportProps) {
               </Card>
             </Section>
 
-            {/* 3. Dialogue Chains */}
-            <Section id="chains" title="三、对话链分析" icon={<TrendingUp size={20} />}>
+            {/* 4. Dialogue Chains */}
+            <Section id="chains" title="四、对话链分析" icon={<TrendingUp size={20} />}>
               {dialogueChains.length <= 3 ? (
                 // Render all chains normally
                 dialogueChains.map((chain, idx) => (
@@ -315,8 +445,8 @@ export default function Report({ data, onBack }: ReportProps) {
               )}
             </Section>
 
-            {/* 4. Focus Map */}
-            <Section id="focus" title="四、面试官关注图谱" icon={<Target size={20} />}>
+            {/* 5. Focus Map */}
+            <Section id="focus" title="五、面试官关注图谱" icon={<Target size={20} />}>
               <Card className="mb-6">
                 <div className="px-6 py-4 border-b border-zinc-100 font-semibold text-zinc-900">话题深度热力图</div>
                 <Table
@@ -369,57 +499,6 @@ export default function Report({ data, onBack }: ReportProps) {
                     </div>
                   </Card>
                 )}
-              </div>
-            </Section>
-
-            {/* 5. Summary */}
-            <Section id="summary" title="五、候选人表现摘要" icon={<CheckCircle2 size={20} />}>
-              <div className="space-y-6">
-                <Card>
-                  <div className="px-6 py-4 border-b border-zinc-100 font-semibold text-zinc-900 flex items-center gap-2">
-                    <Briefcase size={18} className="text-zinc-500" /> 关键背景
-                  </div>
-                  <Table
-                    headers={['项目', '内容']}
-                    rows={candidateSummary.background.map(b => [b.label, b.content])}
-                  />
-                </Card>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card>
-                    <div className="px-6 py-4 border-b border-zinc-100 font-semibold text-zinc-900 flex items-center gap-2">
-                      <Brain size={18} className="text-zinc-500" /> 展现能力
-                    </div>
-                    <div className="p-6 space-y-4">
-                      {candidateSummary.abilities.map((item, i) => (
-                        <div key={i} className="flex gap-3">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0" />
-                          <div>
-                            <span className="font-semibold text-zinc-900 text-sm">{item.label}：</span>
-                            <span className="text-zinc-600 text-sm">{item.description}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-
-                  <Card>
-                    <div className="px-6 py-4 border-b border-zinc-100 font-semibold text-zinc-900 flex items-center gap-2">
-                      <AlertTriangle size={18} className="text-zinc-500" /> 潜在风险
-                    </div>
-                    <div className="p-6 space-y-4">
-                      {candidateSummary.risks.map((item, i) => (
-                        <div key={i} className="flex gap-3">
-                          <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 shrink-0" />
-                          <div>
-                            <span className="font-semibold text-zinc-900 text-sm">{item.label}：</span>
-                            <span className="text-zinc-600 text-sm">{item.description}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-                </div>
               </div>
             </Section>
 
