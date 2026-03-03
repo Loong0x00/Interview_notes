@@ -1,13 +1,20 @@
-import express from "express";
-import fs from "fs";
+import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import multer from "multer";
-import { convertMdToJson } from "./convert.js";
-import { startPipeline, getJob, getAllJobs, addJobListener } from "./pipeline.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+
+import express from "express";
+import fs from "fs";
+import multer from "multer";
+import jwt from "jsonwebtoken";
+import { convertMdToJson } from "./convert.js";
+import { startPipeline, getJob, getAllJobs, addJobListener } from "./pipeline.js";
+import authRouter, { requireAuth } from "./auth.js";
+import { getReportsByUser, userOwnsReport } from "./db.js";
 
 const PORT = 8000;
 const DATA_DIR = path.resolve(__dirname, "../../");
@@ -26,7 +33,16 @@ app.use(express.text({ limit: "10mb" }));
 app.use((_req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  next();
+});
+
+// Preflight — handle OPTIONS in the CORS middleware above
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    res.sendStatus(204);
+    return;
+  }
   next();
 });
 
@@ -47,8 +63,25 @@ const upload = multer({
 });
 
 // ═══════════════════════════════════════════════════════════════
-// Existing report endpoints (unchanged)
+// Auth routes (public, before requireAuth)
 // ═══════════════════════════════════════════════════════════════
+
+app.use("/api/auth", authRouter);
+
+// ═══════════════════════════════════════════════════════════════
+// Report endpoints (protected)
+// ═══════════════════════════════════════════════════════════════
+
+// Path sanitization helper
+function sanitizeName(name: string | string[]): string | null {
+  const n = Array.isArray(name) ? name[0] : name;
+  if (!n) return null;
+  // Reject path traversal attempts
+  if (n.includes("..") || n.includes("/") || n.includes("\\")) {
+    return null;
+  }
+  return n;
+}
 
 interface ReportListItem {
   name: string;
@@ -56,14 +89,11 @@ interface ReportListItem {
   date: string;
 }
 
-function findReports(): ReportListItem[] {
-  const files = fs
-    .readdirSync(DATA_DIR)
-    .filter((f) => f.endsWith("_analysis_data.json"))
-    .sort();
+function findReports(userId: number): ReportListItem[] {
+  const userReportNames = getReportsByUser(userId);
 
-  return files.map((file) => {
-    const name = file.replace("_analysis_data.json", "");
+  return userReportNames.map((name) => {
+    const file = `${name}_analysis_data.json`;
     try {
       const raw = fs.readFileSync(path.join(DATA_DIR, file), "utf-8");
       const data = JSON.parse(raw);
@@ -86,15 +116,24 @@ function loadReport(name: string): object | null {
   return JSON.parse(raw);
 }
 
-// GET /api/reports - list all reports
-app.get("/api/reports", (_req, res) => {
-  const reports = findReports();
+// GET /api/reports - list user's reports
+app.get("/api/reports", requireAuth, (req, res) => {
+  const reports = findReports(req.user!.userId);
   res.json({ reports });
 });
 
 // GET /api/reports/:name - get specific report
-app.get("/api/reports/:name", (req, res) => {
-  const data = loadReport(req.params.name);
+app.get("/api/reports/:name", requireAuth, (req, res) => {
+  const name = sanitizeName(req.params.name);
+  if (!name) {
+    res.status(400).json({ error: "Invalid report name" });
+    return;
+  }
+  if (!userOwnsReport(req.user!.userId, name)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  const data = loadReport(name);
   if (!data) {
     res.status(404).json({ error: "Report not found" });
     return;
@@ -103,8 +142,17 @@ app.get("/api/reports/:name", (req, res) => {
 });
 
 // GET /api/reports/:name/transcript - get transcript data
-app.get("/api/reports/:name/transcript", (req, res) => {
-  const filePath = path.join(DATA_DIR, `${req.params.name}_transcript.json`);
+app.get("/api/reports/:name/transcript", requireAuth, (req, res) => {
+  const name = sanitizeName(req.params.name);
+  if (!name) {
+    res.status(400).json({ error: "Invalid report name" });
+    return;
+  }
+  if (!userOwnsReport(req.user!.userId, name)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  const filePath = path.join(DATA_DIR, `${name}_transcript.json`);
   if (!fs.existsSync(filePath)) {
     res.status(404).json({ error: "Transcript not found" });
     return;
@@ -114,7 +162,7 @@ app.get("/api/reports/:name/transcript", (req, res) => {
 });
 
 // POST /api/convert - convert markdown to JSON
-app.post("/api/convert", async (req, res) => {
+app.post("/api/convert", requireAuth, async (req, res) => {
   try {
     const mdContent =
       typeof req.body === "string" ? req.body : req.body?.markdown;
@@ -140,11 +188,11 @@ app.post("/api/convert", async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
-// Pipeline endpoints
+// Pipeline endpoints (protected)
 // ═══════════════════════════════════════════════════════════════
 
 // POST /api/pipeline/start - upload audio and start pipeline
-app.post("/api/pipeline/start", upload.single("audio"), (req, res) => {
+app.post("/api/pipeline/start", requireAuth, upload.single("audio"), (req, res) => {
   if (!req.file) {
     res.status(400).json({ error: "未上传音频文件" });
     return;
@@ -154,33 +202,59 @@ app.post("/api/pipeline/start", upload.single("audio"), (req, res) => {
   const originalName = Buffer.from(req.file.originalname, "latin1").toString("utf-8");
 
   console.log(`[API] Pipeline start: ${originalName} -> ${audioPath}`);
-  const jobId = startPipeline(audioPath, originalName);
+  const jobId = startPipeline(audioPath, originalName, req.user!.userId);
 
   res.json({ jobId });
 });
 
 // GET /api/pipeline/status/:id - get job status
-app.get("/api/pipeline/status/:id", (req, res) => {
-  const job = getJob(req.params.id);
+app.get("/api/pipeline/status/:id", requireAuth, (req, res) => {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const job = getJob(id);
   if (!job) {
     res.status(404).json({ error: "Job not found" });
+    return;
+  }
+  if (job.userId !== req.user!.userId) {
+    res.status(403).json({ error: "Forbidden" });
     return;
   }
   res.json(job);
 });
 
-// GET /api/pipeline/jobs - list all jobs
-app.get("/api/pipeline/jobs", (_req, res) => {
-  res.json({ jobs: getAllJobs() });
+// GET /api/pipeline/jobs - list user's jobs
+app.get("/api/pipeline/jobs", requireAuth, (req, res) => {
+  res.json({ jobs: getAllJobs(req.user!.userId) });
 });
 
 // GET /api/pipeline/events/:id - SSE endpoint for real-time progress
+// Special auth: accept token from query param OR header (EventSource can't send headers)
 app.get("/api/pipeline/events/:id", (req, res) => {
-  const jobId = req.params.id;
+  // Manual auth for SSE
+  let token = req.headers.authorization?.replace("Bearer ", "");
+  if (!token && typeof req.query.token === "string") token = req.query.token;
+  if (!token) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  let user: { userId: number; username: string };
+  try {
+    user = jwt.verify(token, process.env.JWT_SECRET!) as any;
+  } catch {
+    res.status(401).json({ error: "Invalid token" });
+    return;
+  }
+
+  const jobId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const job = getJob(jobId);
 
   if (!job) {
     res.status(404).json({ error: "Job not found" });
+    return;
+  }
+
+  if (job.userId !== user.userId) {
+    res.status(403).json({ error: "Forbidden" });
     return;
   }
 
@@ -219,6 +293,9 @@ app.get("/api/pipeline/events/:id", (req, res) => {
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`API server running on http://0.0.0.0:${PORT}`);
+  console.log(`  POST /api/auth/register        - Register (invite code)`);
+  console.log(`  POST /api/auth/login           - Login`);
+  console.log(`  GET  /api/auth/me              - Current user`);
   console.log(`  GET  /api/reports              - List reports`);
   console.log(`  GET  /api/reports/{name}        - Get report data`);
   console.log(`  POST /api/convert              - Convert markdown to JSON`);
@@ -228,8 +305,4 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`  GET  /api/pipeline/events/{id} - SSE progress stream`);
   console.log(`Data directory: ${DATA_DIR}`);
   console.log(`Upload directory: ${UPLOAD_DIR}`);
-  const reports = findReports();
-  console.log(
-    `Found ${reports.length} report(s): ${JSON.stringify(reports.map((r) => r.name))}`
-  );
 });

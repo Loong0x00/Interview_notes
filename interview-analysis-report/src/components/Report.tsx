@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { AnalysisReport, DialogueStep, TranscriptSegment } from '../types';
 import TranscriptChat from './TranscriptChat';
+import { useAuth } from '../contexts/AuthContext';
 
 // --- Types ---
 
@@ -226,6 +227,7 @@ interface ReportProps {
 
 export default function Report({ data, reportName, onBack }: ReportProps) {
   const { meta, basicInfo, questions, questionStats, dialogueChains, focusMap, candidateSummary } = data;
+  const { authFetch } = useAuth();
 
   const [questionFilter, setQuestionFilter] = useState<'全部' | '预设' | '追问' | '澄清'>('全部');
   const [transcript, setTranscript] = useState<TranscriptSegment[]>([]);
@@ -242,12 +244,12 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
   useEffect(() => {
     if (!reportName) return;
     setTranscriptLoading(true);
-    fetch(`/api/reports/${encodeURIComponent(reportName)}/transcript`)
+    authFetch(`/api/reports/${encodeURIComponent(reportName)}/transcript`)
       .then(res => res.ok ? res.json() : [])
       .then((segments: TranscriptSegment[]) => setTranscript(segments))
       .catch(() => setTranscript([]))
       .finally(() => setTranscriptLoading(false));
-  }, [reportName]);
+  }, [reportName, authFetch]);
 
   const handleQuestionClick = (timestamp?: string) => {
     if (!timestamp || transcript.length === 0) return;

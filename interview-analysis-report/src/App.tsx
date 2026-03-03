@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
 import Report from './components/Report';
 import UploadPage from './components/UploadPage';
+import LoginPage from './components/LoginPage';
+import RegisterPage from './components/RegisterPage';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import type { AnalysisReport, ReportListItem } from './types';
 
-type View = 'list' | 'report' | 'upload';
+type View = 'list' | 'report' | 'upload' | 'login' | 'register';
 
-export default function App() {
+function AppInner() {
+  const { isAuthenticated, isLoading, logout, authFetch, user } = useAuth();
   const [view, setView] = useState<View>('list');
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [selectedReport, setSelectedReport] = useState<AnalysisReport | null>(null);
@@ -13,13 +17,24 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const handleAuthError = (res: Response) => {
+    if (res.status === 401) {
+      logout();
+      return true;
+    }
+    return false;
+  };
+
   const fetchReports = () => {
     setLoading(true);
-    fetch('/api/reports')
-      .then(res => res.json())
+    authFetch('/api/reports')
+      .then(res => {
+        if (handleAuthError(res)) return;
+        return res.json();
+      })
       .then(data => {
+        if (!data) return;
         setReports(data.reports);
-        // Auto-load first report if only one exists and on list view
         if (data.reports.length === 1 && view === 'list') {
           loadReport(data.reports[0].name);
         } else {
@@ -33,15 +48,21 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchReports();
-  }, []);
+    if (isAuthenticated) {
+      fetchReports();
+    }
+  }, [isAuthenticated]);
 
   const loadReport = (name: string) => {
     setLoading(true);
     setError(null);
-    fetch(`/api/reports/${encodeURIComponent(name)}`)
-      .then(res => res.json())
+    authFetch(`/api/reports/${encodeURIComponent(name)}`)
+      .then(res => {
+        if (handleAuthError(res)) return;
+        return res.json();
+      })
       .then(data => {
+        if (!data) return;
         setSelectedReport(data);
         setSelectedReportName(name);
         setView('report');
@@ -57,6 +78,30 @@ export default function App() {
     fetchReports();
     loadReport(reportName);
   };
+
+  // Auth loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
+        <div className="text-zinc-400 text-sm">Loading...</div>
+      </div>
+    );
+  }
+
+  // Not authenticated - show login/register
+  if (!isAuthenticated) {
+    if (view === 'register') {
+      return <RegisterPage onGoLogin={() => setView('login')} />;
+    }
+    return <LoginPage onGoRegister={() => setView('register')} />;
+  }
+
+  const userMenu = (
+    <div className="flex items-center gap-3">
+      <span className="text-sm text-zinc-500">{user?.username}</span>
+      <button onClick={logout} className="text-sm text-zinc-400 hover:text-zinc-600 transition-colors">退出</button>
+    </div>
+  );
 
   // Upload view
   if (view === 'upload') {
@@ -104,12 +149,15 @@ export default function App() {
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">R</div>
             <h1 className="text-lg font-bold text-zinc-900">Interview Analysis Reports</h1>
           </div>
-          <button
-            onClick={() => setView('upload')}
-            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
-          >
-            Upload Audio
-          </button>
+          <div className="flex items-center gap-4">
+            {userMenu}
+            <button
+              onClick={() => setView('upload')}
+              className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+            >
+              Upload Audio
+            </button>
+          </div>
         </div>
       </header>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -139,5 +187,13 @@ export default function App() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppInner />
+    </AuthProvider>
   );
 }

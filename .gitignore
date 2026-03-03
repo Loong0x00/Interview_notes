@@ -14,5 +14,10 @@ logs/
 __pycache__/
 *.pyc
 
+# SQLite 数据库
+*.db
+*.db-shm
+*.db-wal
+
 # 系统
 .DS_Store

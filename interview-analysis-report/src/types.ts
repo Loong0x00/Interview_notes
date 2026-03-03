@@ -136,3 +136,14 @@ export interface PipelineJob {
   result?: string;
   error?: string;
 }
+
+export interface User {
+  userId: number;
+  username: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  username: string;
+  userId: number;
+}
