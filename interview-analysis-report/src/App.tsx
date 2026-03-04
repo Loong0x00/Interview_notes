@@ -1,12 +1,27 @@
 import { useState, useEffect } from 'react';
+import { Sun, Moon } from 'lucide-react';
 import Report from './components/Report';
 import UploadPage from './components/UploadPage';
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import type { AnalysisReport, ReportListItem } from './types';
 
 type View = 'list' | 'report' | 'upload' | 'login' | 'register';
+
+function ThemeToggle() {
+  const { theme, toggle } = useTheme();
+  return (
+    <button
+      onClick={toggle}
+      className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+      aria-label="Toggle theme"
+    >
+      {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+    </button>
+  );
+}
 
 function AppInner() {
   const { isAuthenticated, isLoading, logout, authFetch, user } = useAuth();
@@ -87,8 +102,8 @@ function AppInner() {
   // Auth loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
-        <div className="text-zinc-400 text-sm">Loading...</div>
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
+        <div className="text-zinc-400 dark:text-zinc-500 text-sm">Loading...</div>
       </div>
     );
   }
@@ -103,8 +118,8 @@ function AppInner() {
 
   const userMenu = (
     <div className="flex items-center gap-3">
-      <span className="text-sm text-zinc-500">{user?.username}</span>
-      <button onClick={logout} className="text-sm text-zinc-400 hover:text-zinc-600 transition-colors">退出</button>
+      <span className="text-sm text-zinc-500 dark:text-zinc-400">{user?.username}</span>
+      <button onClick={logout} className="text-sm text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">退出</button>
     </div>
   );
 
@@ -120,15 +135,15 @@ function AppInner() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
-        <div className="text-zinc-500 text-lg">Loading...</div>
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
+        <div className="text-zinc-500 dark:text-zinc-400 text-lg">Loading...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
         <div className="text-red-500 text-lg">{error}</div>
       </div>
     );
@@ -147,14 +162,15 @@ function AppInner() {
 
   // Report list view
   return (
-    <div className="min-h-screen bg-zinc-50 font-sans text-zinc-900">
-      <header className="bg-white border-b border-zinc-200">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100">
+      <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">R</div>
-            <h1 className="text-lg font-bold text-zinc-900">Interview Analysis Reports</h1>
+            <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Interview Analysis Reports</h1>
           </div>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             {userMenu}
             <button
               onClick={() => setView('upload')}
@@ -168,7 +184,7 @@ function AppInner() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {reports.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-zinc-400 text-lg mb-4">No reports yet</p>
+            <p className="text-zinc-400 dark:text-zinc-500 text-lg mb-4">No reports yet</p>
             <button
               onClick={() => setView('upload')}
               className="px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
@@ -182,10 +198,10 @@ function AppInner() {
               <button
                 key={report.name}
                 onClick={() => loadReport(report.name)}
-                className="w-full text-left bg-white rounded-xl shadow-sm border border-zinc-200 p-6 hover:border-indigo-300 hover:shadow-md transition-all"
+                className="w-full text-left bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md transition-all"
               >
-                <h2 className="text-lg font-semibold text-zinc-900">{report.position}</h2>
-                <p className="text-sm text-zinc-500 mt-1">{report.date}</p>
+                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{report.position}</h2>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{report.date}</p>
               </button>
             ))}
           </div>
@@ -197,8 +213,10 @@ function AppInner() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppInner />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppInner />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

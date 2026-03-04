@@ -40,7 +40,7 @@ const Card = ({ children, className = "" }: { children: React.ReactNode; classNa
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true, margin: "-50px" }}
     transition={{ duration: 0.5 }}
-    className={`bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden ${className}`}
+    className={`bg-white dark:bg-zinc-900 rounded-xl shadow-sm dark:shadow-zinc-900/50 border border-zinc-200 dark:border-zinc-700 overflow-hidden ${className}`}
   >
     {children}
   </motion.div>
@@ -48,11 +48,11 @@ const Card = ({ children, className = "" }: { children: React.ReactNode; classNa
 
 const Badge = ({ children, color = "blue" }: { children: React.ReactNode; color?: "blue" | "green" | "amber" | "red" | "zinc" }) => {
   const colors = {
-    blue: "bg-blue-50 text-blue-700 border-blue-200",
-    green: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    amber: "bg-amber-50 text-amber-700 border-amber-200",
-    red: "bg-red-50 text-red-700 border-red-200",
-    zinc: "bg-zinc-100 text-zinc-700 border-zinc-200",
+    blue: "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+    green: "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
+    amber: "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800",
+    red: "bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
+    zinc: "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700",
   };
   return (
     <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${colors[color]}`}>
@@ -64,18 +64,18 @@ const Badge = ({ children, color = "blue" }: { children: React.ReactNode; color?
 const Table = ({ headers, rows, className = "" }: TableProps) => (
   <div className={`overflow-x-auto ${className}`}>
     <table className="w-full text-sm text-left">
-      <thead className="text-xs text-zinc-500 uppercase bg-zinc-50 border-b border-zinc-200">
+      <thead className="text-xs text-zinc-500 dark:text-zinc-400 uppercase bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-700">
         <tr>
           {headers.map((h, i) => (
             <th key={i} className="px-6 py-3 font-medium tracking-wider">{h}</th>
           ))}
         </tr>
       </thead>
-      <tbody className="divide-y divide-zinc-100">
+      <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
         {rows.map((row, i) => (
-          <tr key={i} className="hover:bg-zinc-50/50 transition-colors">
+          <tr key={i} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors">
             {row.map((cell, j) => (
-              <td key={j} className={`px-6 py-4 text-zinc-700 ${j === row.length - 1 ? 'whitespace-pre-wrap' : 'whitespace-nowrap'}`}>{cell}</td>
+              <td key={j} className={`px-6 py-4 text-zinc-700 dark:text-zinc-300 ${j === row.length - 1 ? 'whitespace-pre-wrap' : 'whitespace-nowrap'}`}>{cell}</td>
             ))}
           </tr>
         ))}
@@ -92,10 +92,10 @@ const Section = ({ title, icon, children, id }: SectionProps) => (
       viewport={{ once: true }}
       className="flex items-center gap-3 mb-6"
     >
-      <div className="p-2 bg-indigo-600 rounded-lg text-white shadow-md shadow-indigo-200">
+      <div className="p-2 bg-indigo-600 rounded-lg text-white shadow-md shadow-indigo-200 dark:shadow-indigo-900">
         {icon}
       </div>
-      <h2 className="text-2xl font-bold text-zinc-900 tracking-tight">{title}</h2>
+      <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">{title}</h2>
     </motion.div>
     {children}
   </section>
@@ -124,11 +124,11 @@ const CollapsibleAnswer: React.FC<{ content: string }> = ({ content }) => {
         initial={false}
         animate={{ height: expanded || !needsTruncation ? 'auto' : ANSWER_MAX_COLLAPSED_HEIGHT }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
-        className="text-sm leading-relaxed text-zinc-700 overflow-hidden relative"
+        className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300 overflow-hidden relative"
       >
         {content}
         {!expanded && needsTruncation && (
-          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-zinc-900 to-transparent" />
         )}
       </motion.div>
       {needsTruncation && (
@@ -145,11 +145,11 @@ const CollapsibleAnswer: React.FC<{ content: string }> = ({ content }) => {
 
 const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({ title, steps }) => (
   <Card className="mb-6">
-    <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 flex justify-between items-center">
-      <h3 className="font-semibold text-zinc-900">{title}</h3>
+    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/50 flex justify-between items-center">
+      <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{title}</h3>
     </div>
     <div className="p-6">
-      <div className="relative pl-8 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-200">
+      <div className="relative pl-8 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-200 dark:before:bg-zinc-700">
         {steps.map((step, idx) => (
           <motion.div
             key={idx}
@@ -159,7 +159,7 @@ const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({
             transition={{ delay: idx * 0.1 }}
             className="relative"
           >
-            <div className={`absolute -left-[29px] w-6 h-6 rounded-full border-2 flex items-center justify-center z-10 bg-white
+            <div className={`absolute -left-[29px] w-6 h-6 rounded-full border-2 flex items-center justify-center z-10 bg-white dark:bg-zinc-900
               ${step.type === 'question' ? 'border-blue-500 text-blue-500' :
                 step.type === 'trigger' ? 'border-amber-500 text-amber-500' :
                 step.type === 'clarification' ? 'border-purple-500 text-purple-500' :
@@ -181,13 +181,13 @@ const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({
                     'text-emerald-600'}`}>
                   {step.label || (step.type === 'question' ? '面试官提问' : step.type === 'trigger' ? '触发关键词' : step.type === 'clarification' ? '面试官澄清' : '候选人回答')}
                 </span>
-                {step.time && <span className="text-xs text-zinc-400 font-mono">{step.time}</span>}
+                {step.time && <span className="text-xs text-zinc-400 dark:text-zinc-500 font-mono">{step.time}</span>}
               </div>
 
               {step.type === 'answer' ? (
                 <CollapsibleAnswer content={step.content} />
               ) : (
-                <div className={`text-sm leading-relaxed ${step.type === 'trigger' ? 'font-mono text-amber-700 bg-amber-50 p-2 rounded border border-amber-100 inline-block' : 'text-zinc-700'}`}>
+                <div className={`text-sm leading-relaxed ${step.type === 'trigger' ? 'font-mono text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950 p-2 rounded border border-amber-100 dark:border-amber-800 inline-block' : 'text-zinc-700 dark:text-zinc-300'}`}>
                   {step.content}
                 </div>
               )}
@@ -282,23 +282,23 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
   const secondInsight = focusMap.insights.find(i => i.level.includes('高') && !i.level.includes('极高'));
 
   return (
-    <div className="min-h-screen bg-zinc-50 font-sans text-zinc-900 selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 selection:bg-indigo-100 selection:text-indigo-900">
 
       {/* Header */}
-      <header className="bg-white border-b border-zinc-200 sticky top-0 z-50 bg-opacity-90 backdrop-blur-md">
+      <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 sticky top-0 z-50 bg-opacity-90 dark:bg-opacity-90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {onBack && (
-              <button onClick={onBack} className="mr-2 text-zinc-400 hover:text-zinc-700 transition-colors">
+              <button onClick={onBack} className="mr-2 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors">
                 &larr;
               </button>
             )}
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">
               R
             </div>
-            <h1 className="text-lg font-bold text-zinc-900 hidden sm:block">面试对话分析报告</h1>
+            <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 hidden sm:block">面试对话分析报告</h1>
           </div>
-          <div className="flex items-center gap-4 text-sm text-zinc-500">
+          <div className="flex items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400">
             <span className="flex items-center gap-1"><User size={14} /> {meta.position}</span>
             <span className="hidden sm:flex items-center gap-1"><Clock size={14} /> {meta.date}</span>
           </div>
@@ -321,7 +321,7 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                 <a
                   key={item.id}
                   href={`#${item.id}`}
-                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-zinc-600 rounded-lg hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all group"
+                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-400 rounded-lg hover:bg-white dark:hover:bg-zinc-800 hover:text-indigo-600 hover:shadow-sm dark:hover:shadow-zinc-900/50 transition-all group"
                 >
                   <item.icon size={16} className="group-hover:text-indigo-600 transition-colors" />
                   {item.label}
@@ -337,8 +337,8 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
             <Section id="summary" title="一、候选人表现摘要" icon={<CheckCircle2 size={20} />}>
               <div className="space-y-6">
                 <Card>
-                  <div className="px-6 py-4 border-b border-zinc-100 font-semibold text-zinc-900 flex items-center gap-2">
-                    <Briefcase size={18} className="text-zinc-500" /> 关键背景
+                  <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                    <Briefcase size={18} className="text-zinc-500 dark:text-zinc-400" /> 关键背景
                   </div>
                   <Table
                     headers={['项目', '内容']}
@@ -348,16 +348,16 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Card>
-                    <div className="px-6 py-4 border-b border-zinc-100 font-semibold text-zinc-900 flex items-center gap-2">
-                      <Brain size={18} className="text-zinc-500" /> 展现能力
+                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                      <Brain size={18} className="text-zinc-500 dark:text-zinc-400" /> 展现能力
                     </div>
                     <div className="p-6 space-y-4">
                       {candidateSummary.abilities.map((item, i) => (
                         <div key={i} className="flex gap-3">
                           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0" />
                           <div>
-                            <span className="font-semibold text-zinc-900 text-sm">{item.label}：</span>
-                            <span className="text-zinc-600 text-sm">{item.description}</span>
+                            <span className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">{item.label}：</span>
+                            <span className="text-zinc-600 dark:text-zinc-400 text-sm">{item.description}</span>
                           </div>
                         </div>
                       ))}
@@ -365,16 +365,16 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                   </Card>
 
                   <Card>
-                    <div className="px-6 py-4 border-b border-zinc-100 font-semibold text-zinc-900 flex items-center gap-2">
-                      <AlertTriangle size={18} className="text-zinc-500" /> 潜在风险
+                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                      <AlertTriangle size={18} className="text-zinc-500 dark:text-zinc-400" /> 潜在风险
                     </div>
                     <div className="p-6 space-y-4">
                       {candidateSummary.risks.map((item, i) => (
                         <div key={i} className="flex gap-3">
                           <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 shrink-0" />
                           <div>
-                            <span className="font-semibold text-zinc-900 text-sm">{item.label}：</span>
-                            <span className="text-zinc-600 text-sm">{item.description}</span>
+                            <span className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">{item.label}：</span>
+                            <span className="text-zinc-600 dark:text-zinc-400 text-sm">{item.description}</span>
                           </div>
                         </div>
                       ))}
@@ -388,7 +388,7 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
             <Section id="basic-info" title="二、基本信息" icon={<User size={20} />}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card>
-                  <div className="px-6 py-4 border-b border-zinc-100 font-semibold text-zinc-900">角色识别</div>
+                  <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100">角色识别</div>
                   <Table
                     headers={['角色', 'Speaker', '判定依据']}
                     rows={basicInfo.roles.map(r => [
@@ -400,16 +400,16 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                 </Card>
 
                 <Card>
-                  <div className="px-6 py-4 border-b border-zinc-100 font-semibold text-zinc-900">面试时长</div>
+                  <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100">面试时长</div>
                   <div className="p-6 space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-zinc-500">总时长</span>
+                      <span className="text-zinc-500 dark:text-zinc-400">总时长</span>
                       <span className="font-mono font-medium">{basicInfo.duration.totalDuration}</span>
                     </div>
-                    <div className="w-full bg-zinc-100 rounded-full h-2 overflow-hidden">
+                    <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2 overflow-hidden">
                       <div className="bg-indigo-500 h-2 rounded-full" style={{ width: `${basicInfo.duration.progressPercent}%` }}></div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 text-xs text-zinc-500 pt-2">
+                    <div className="grid grid-cols-2 gap-4 text-xs text-zinc-500 dark:text-zinc-400 pt-2">
                       <div>
                         <p>自我介绍: {basicInfo.duration.selfIntroEnd}</p>
                         <p>正式问答: {basicInfo.duration.formalQARange}</p>
@@ -433,7 +433,7 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                     className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                       questionFilter === tab
                         ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                        : 'bg-white text-zinc-600 border-zinc-200 hover:border-indigo-300 hover:text-indigo-600'
+                        : 'bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-indigo-300 hover:text-indigo-600'
                     }`}
                   >
                     {tab}
@@ -450,28 +450,28 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                 <Card className="xl:max-h-[800px] overflow-y-auto">
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
-                      <thead className="text-xs text-zinc-500 uppercase bg-zinc-50 border-b border-zinc-200">
+                      <thead className="text-xs text-zinc-500 dark:text-zinc-400 uppercase bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-700">
                         <tr>
                           <th className="px-6 py-3 font-medium tracking-wider">编号</th>
                           <th className="px-6 py-3 font-medium tracking-wider">问题文本</th>
                           <th className="px-6 py-3 font-medium tracking-wider">类型</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-zinc-100">
+                      <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                         {filteredQuestions.map((q, i) => (
                           <tr
                             key={i}
                             onClick={() => q.timestamp && handleQuestionClick(q.timestamp)}
-                            className={`transition-colors ${q.timestamp ? 'cursor-pointer hover:bg-indigo-50/60' : 'hover:bg-zinc-50/50'}`}
+                            className={`transition-colors ${q.timestamp ? 'cursor-pointer hover:bg-indigo-50/60 dark:hover:bg-indigo-950/60' : 'hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50'}`}
                           >
-                            <td className="px-6 py-4 text-zinc-700 whitespace-nowrap">
+                            <td className="px-6 py-4 text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
                               <div className="flex items-center gap-2">
                                 {q.id}
-                                {q.timestamp && <span className="text-[10px] font-mono text-zinc-400">{q.timestamp}</span>}
+                                {q.timestamp && <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500">{q.timestamp}</span>}
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-zinc-700 whitespace-pre-wrap">{q.text}</td>
-                            <td className="px-6 py-4 text-zinc-700 whitespace-nowrap">
+                            <td className="px-6 py-4 text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">{q.text}</td>
+                            <td className="px-6 py-4 text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
                               <Badge color={getQuestionBadgeColor(q.type)}>{q.type}</Badge>
                             </td>
                           </tr>
@@ -479,7 +479,7 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                       </tbody>
                     </table>
                   </div>
-                  <div className="bg-zinc-50 p-4 border-t border-zinc-100 flex gap-4 text-sm text-zinc-600">
+                  <div className="bg-zinc-50 dark:bg-zinc-950 p-4 border-t border-zinc-100 dark:border-zinc-800 flex gap-4 text-sm text-zinc-600 dark:text-zinc-400">
                     <span className="font-medium">统计：</span>
                     <span>预设问题: {questionStats.preset}</span>
                     <span>追问: {questionStats.followUp}</span>
@@ -489,12 +489,12 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
 
                 {/* Right: Transcript chat */}
                 <Card className="xl:max-h-[800px] flex flex-col xl:sticky xl:top-4">
-                  <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
+                  <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/50 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <MessageCircle size={16} className="text-zinc-500" />
-                      <h3 className="font-semibold text-zinc-900">转写全文</h3>
+                      <MessageCircle size={16} className="text-zinc-500 dark:text-zinc-400" />
+                      <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">转写全文</h3>
                     </div>
-                    <span className="text-xs text-zinc-400">{transcript.length} 条对话</span>
+                    <span className="text-xs text-zinc-400 dark:text-zinc-500">{transcript.length} 条对话</span>
                   </div>
                   <TranscriptChat
                     segments={transcript}
@@ -534,7 +534,7 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
             {/* 5. Focus Map */}
             <Section id="focus" title="五、面试官关注图谱" icon={<Target size={20} />}>
               <Card className="mb-6">
-                <div className="px-6 py-4 border-b border-zinc-100 font-semibold text-zinc-900">话题深度热力图</div>
+                <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100">话题深度热力图</div>
                 <Table
                   headers={['话题', '追问层数', '涉及问题', '关注等级']}
                   rows={focusMap.topics.map(t => [
@@ -548,18 +548,18 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {topInsight && (
-                  <Card className="p-6 bg-red-50/50 border-red-100">
+                  <Card className="p-6 bg-red-50/50 dark:bg-red-950/50 border-red-100 dark:border-red-800">
                     <div className="flex items-start gap-3">
-                      <AlertTriangle className="text-red-600 mt-1 shrink-0" size={20} />
+                      <AlertTriangle className="text-red-600 dark:text-red-400 mt-1 shrink-0" size={20} />
                       <div>
-                        <h3 className="font-bold text-red-900 mb-2">极高关注：{topInsight.title}</h3>
-                        <div className="text-sm text-red-800 leading-relaxed">
+                        <h3 className="font-bold text-red-900 dark:text-red-200 mb-2">极高关注：{topInsight.title}</h3>
+                        <div className="text-sm text-red-800 dark:text-red-300 leading-relaxed">
                           <p>{topInsight.description}</p>
                           <ul className="list-disc pl-4 mt-2 space-y-1">
                             {topInsight.points.map((p, i) => <li key={i}>{p}</li>)}
                           </ul>
                           {topInsight.coreQuestion && (
-                            <div className="mt-3 font-semibold text-red-900">
+                            <div className="mt-3 font-semibold text-red-900 dark:text-red-200">
                               核心问题：{topInsight.coreQuestion}
                             </div>
                           )}
@@ -570,12 +570,12 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                 )}
 
                 {secondInsight && (
-                  <Card className="p-6 bg-amber-50/50 border-amber-100">
+                  <Card className="p-6 bg-amber-50/50 dark:bg-amber-950/50 border-amber-100 dark:border-amber-800">
                     <div className="flex items-start gap-3">
-                      <Search className="text-amber-600 mt-1 shrink-0" size={20} />
+                      <Search className="text-amber-600 dark:text-amber-400 mt-1 shrink-0" size={20} />
                       <div>
-                        <h3 className="font-bold text-amber-900 mb-2">高关注：{secondInsight.title}</h3>
-                        <div className="text-sm text-amber-800 leading-relaxed">
+                        <h3 className="font-bold text-amber-900 dark:text-amber-200 mb-2">高关注：{secondInsight.title}</h3>
+                        <div className="text-sm text-amber-800 dark:text-amber-300 leading-relaxed">
                           <p>{secondInsight.description}</p>
                           <ul className="list-disc pl-4 mt-2 space-y-1">
                             {secondInsight.points.map((p, i) => <li key={i}>{p}</li>)}
@@ -588,7 +588,7 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
               </div>
             </Section>
 
-            <footer className="text-center text-zinc-400 text-sm py-12 border-t border-zinc-200 mt-12">
+            <footer className="text-center text-zinc-400 dark:text-zinc-500 text-sm py-12 border-t border-zinc-200 dark:border-zinc-700 mt-12">
               <p>本报告由 AI 分析层（{meta.model}）依据 CLAUDE.md 5步分析流程生成</p>
               <p className="mt-1">原始数据来源：{meta.source}</p>
             </footer>

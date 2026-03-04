@@ -26,38 +26,38 @@ export default function LoginPage({ onGoRegister }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="flex items-center justify-center gap-2 mb-8">
           <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
             R
           </div>
-          <span className="text-xl font-bold text-zinc-900">Interview Analysis</span>
+          <span className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Interview Analysis</span>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-zinc-200 p-6">
-          <h2 className="text-lg font-semibold text-zinc-900 mb-6 text-center">登录</h2>
+        <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-6 text-center">登录</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">用户名</label>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">用户名</label>
               <input
                 type="text"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">密码</label>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">密码</label>
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
               />
             </div>
 
@@ -74,7 +74,7 @@ export default function LoginPage({ onGoRegister }: LoginPageProps) {
             </button>
           </form>
 
-          <p className="mt-4 text-center text-sm text-zinc-500">
+          <p className="mt-4 text-center text-sm text-zinc-500 dark:text-zinc-400">
             没有账号？
             <button onClick={onGoRegister} className="text-indigo-600 hover:text-indigo-700 font-medium ml-1">
               注册

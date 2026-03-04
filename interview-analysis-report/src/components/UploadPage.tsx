@@ -156,20 +156,20 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
   const stepIndex = job ? getStepIndex(job.status) : -2;
 
   return (
-    <div className="min-h-screen bg-zinc-50 font-sans text-zinc-900">
-      <header className="bg-white border-b border-zinc-200">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100">
+      <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">
               R
             </div>
-            <h1 className="text-lg font-bold text-zinc-900">
+            <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
               Upload Interview Audio
             </h1>
           </div>
           <button
             onClick={onBack}
-            className="text-sm text-zinc-500 hover:text-zinc-800 transition-colors"
+            className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
           >
             Back to Reports
           </button>
@@ -189,10 +189,10 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
               transition-all duration-200
               ${
                 dragging
-                  ? "border-indigo-500 bg-indigo-50"
+                  ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950"
                   : file
-                  ? "border-indigo-300 bg-white"
-                  : "border-zinc-300 bg-white hover:border-indigo-300 hover:bg-zinc-50"
+                  ? "border-indigo-300 bg-white dark:bg-zinc-900"
+                  : "border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 hover:border-indigo-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
               }
             `}
           >
@@ -208,14 +208,14 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
               <div className="space-y-3">
                 <FileAudio className="w-12 h-12 text-indigo-500 mx-auto" />
                 <div>
-                  <p className="text-lg font-medium text-zinc-900">
+                  <p className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
                     {file.name}
                   </p>
-                  <p className="text-sm text-zinc-500 mt-1">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
                     {formatSize(file.size)}
                   </p>
                 </div>
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-zinc-400 dark:text-zinc-500">
                   Click or drag to replace
                 </p>
               </div>
@@ -223,10 +223,10 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
               <div className="space-y-3">
                 <Upload className="w-12 h-12 text-zinc-400 mx-auto" />
                 <div>
-                  <p className="text-lg font-medium text-zinc-700">
+                  <p className="text-lg font-medium text-zinc-700 dark:text-zinc-300">
                     Drag audio file here or click to browse
                   </p>
-                  <p className="text-sm text-zinc-400 mt-1">
+                  <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1">
                     Supported: M4A, MP3, WAV, FLAC, MP4, AAC, OGG, WMA
                   </p>
                 </div>
@@ -252,8 +252,8 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
 
         {/* Progress Section */}
         {job && (
-          <div className="bg-white rounded-xl shadow-sm border border-zinc-200 p-8 mt-0">
-            <h2 className="text-lg font-semibold text-zinc-900 mb-6">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm dark:shadow-zinc-900/50 border border-zinc-200 dark:border-zinc-700 p-8 mt-0">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-6">
               处理中：{file?.name || resumedFileName || ''}
             </h2>
 
@@ -269,9 +269,9 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                     <div
                       className={`
                         w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0
-                        ${isDone ? "bg-green-100 text-green-600" : ""}
-                        ${isActive ? "bg-indigo-100 text-indigo-600" : ""}
-                        ${isPending ? "bg-zinc-100 text-zinc-400" : ""}
+                        ${isDone ? "bg-green-100 dark:bg-green-950 text-green-600 dark:text-green-400" : ""}
+                        ${isActive ? "bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400" : ""}
+                        ${isPending ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500" : ""}
                       `}
                     >
                       {isDone ? (
@@ -286,16 +286,16 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                       <p
                         className={`font-medium ${
                           isDone
-                            ? "text-green-700"
+                            ? "text-green-700 dark:text-green-300"
                             : isActive
-                            ? "text-indigo-700"
-                            : "text-zinc-400"
+                            ? "text-indigo-700 dark:text-indigo-300"
+                            : "text-zinc-400 dark:text-zinc-500"
                         }`}
                       >
                         [{step.num}/3] {step.label}
                       </p>
                       {isActive && (
-                        <p className="text-sm text-zinc-500 mt-0.5">
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
                           {job.progress}
                         </p>
                       )}
@@ -307,9 +307,9 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
 
             {/* Done State */}
             {job.status === "done" && (
-              <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-                <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                <p className="text-green-800 font-medium">
+              <div className="mt-8 p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg text-center">
+                <CheckCircle className="w-8 h-8 text-green-500 dark:text-green-400 mx-auto mb-2" />
+                <p className="text-green-800 dark:text-green-300 font-medium">
                   Analysis complete! Redirecting to report...
                 </p>
               </div>
@@ -317,12 +317,12 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
 
             {/* Error State */}
             {job.status === "error" && (
-              <div className="mt-8 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="mt-8 p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-red-800 font-medium">Processing Failed</p>
-                    <p className="text-red-600 text-sm mt-1">
+                    <p className="text-red-800 dark:text-red-300 font-medium">Processing Failed</p>
+                    <p className="text-red-600 dark:text-red-400 text-sm mt-1">
                       {job.error || "Unknown error"}
                     </p>
                   </div>
@@ -332,7 +332,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                     setJob(null);
                     setFile(null);
                   }}
-                  className="mt-4 px-4 py-2 text-sm bg-white border border-red-200 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
+                  className="mt-4 px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
                 >
                   Try Again
                 </button>
