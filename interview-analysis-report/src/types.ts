@@ -32,6 +32,7 @@ export interface DialogueStep {
   label?: string;      // e.g. "Q1 预设"
   content: string;
   time?: string;       // e.g. "68s~173s"
+  triggerLogic?: string; // e.g. "专业边界探测" (only for trigger type)
 }
 
 export interface DialogueChain {
@@ -47,11 +48,15 @@ export interface FocusTopicRow {
 }
 
 export interface FocusInsight {
-  level: string;       // e.g. "极高关注", "高关注"
+  level: string;       // e.g. "高关注", "中关注"
   title: string;       // e.g. "产品评测能力"
   description: string; // main description text
   points: string[];    // bullet points
   coreQuestion?: string; // optional concluding emphasis
+  intention?: string;  // 面试官真实意图
+  candidateHighlights?: string[]; // 候选人高光表现
+  candidateWeaknesses?: string[]; // 候选人失分表现
+  suggestions?: string[]; // 改进建议
 }
 
 export interface BackgroundItem {
@@ -89,6 +94,9 @@ export interface ReportMeta {
 
 export interface PositionSummary {
   responsibilities: string[];
+  interviewActualWork?: string[];  // 面试官口述的实际工作
+  conflictsHighlighted?: string[]; // JD与面试实际的冲突
+  hiddenRequirements?: string[];   // 隐藏要求
   workIntensity: string;
   keyKPIs: string[];
   teamCulture: string;
@@ -107,6 +115,9 @@ export interface FitDimension {
 export interface FitAnalysis {
   overallScore: number;
   dimensions: FitDimension[];
+  hardSkillMatch?: string;       // 硬技能匹配总结
+  softSkillMatch?: string;       // 软技能匹配总结
+  experienceRelevance?: string;  // 经验相关度总结
   strengths: string[];
   gaps: string[];
   recommendation: string;
