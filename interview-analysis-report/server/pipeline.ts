@@ -4,7 +4,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { transcribe, type TranscriptSegment } from "./transcribe.js";
 import { formatTranscript, analyze } from "./analyze.js";
-import { convertMdToJson } from "./convert.js";
 import { registerReport, saveJob, getPersistedJob, getActiveJobs, deleteOldJobs } from "./db.js";
 import { parseTranscriptFile } from "./parseTranscript.js";
 
@@ -17,7 +16,6 @@ export type JobStatus =
   | "uploading"
   | "transcribing"
   | "analyzing"
-  | "converting"
   | "done"
   | "error";
 
@@ -77,46 +75,36 @@ function shortUuid(): string {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Shared analysis + convert + register + cleanup
+// Shared analysis + register + cleanup
 // ═══════════════════════════════════════════════════════════════
 
-async function runAnalysisAndConvert(
+async function runAnalysis(
   job: PipelineJob,
   baseName: string,
   segments: TranscriptSegment[],
   tempFilePath: string,
-  stepPrefix: { analysis: string; convert: string }
+  stepPrefix: string
 ): Promise<void> {
   const transcriptPath = path.join(DATA_DIR, `${baseName}_transcript.json`);
-  const analysisPath = path.join(DATA_DIR, `${baseName}_analysis.md`);
   const analysisJsonPath = path.join(DATA_DIR, `${baseName}_analysis_data.json`);
 
   // Save normalized transcript
   fs.writeFileSync(transcriptPath, JSON.stringify(segments, null, 2), "utf-8");
   console.log(`[Pipeline] Saved transcript (${segments.length} segments): ${transcriptPath}`);
 
-  // AI Analysis
+  // AI Analysis (directly outputs JSON)
   job.status = "analyzing";
-  job.progress = `${stepPrefix.analysis} AI 分析中...`;
+  job.progress = `${stepPrefix} AI 分析中...`;
   updateJob(job);
 
   const transcriptText = formatTranscript(segments);
-  const report = await analyze(transcriptText, (detail) => {
-    job.progress = `${stepPrefix.analysis} AI 分析 - ${detail}`;
+  const jsonData = await analyze(transcriptText, (detail) => {
+    job.progress = `${stepPrefix} AI 分析 - ${detail}`;
     updateJob(job);
   });
 
-  fs.writeFileSync(analysisPath, report, "utf-8");
-  console.log(`[Pipeline] Saved analysis: ${analysisPath}`);
-
-  // Convert to structured JSON
-  job.status = "converting";
-  job.progress = `${stepPrefix.convert} 结构化转换中...`;
-  updateJob(job);
-
-  const jsonData = await convertMdToJson(report);
   fs.writeFileSync(analysisJsonPath, JSON.stringify(jsonData, null, 2), "utf-8");
-  console.log(`[Pipeline] Saved JSON: ${analysisJsonPath}`);
+  console.log(`[Pipeline] Saved analysis JSON: ${analysisJsonPath}`);
 
   // Register report ownership
   if (job.userId) {
@@ -141,7 +129,7 @@ async function runAnalysisAndConvert(
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Audio pipeline (transcribe + analyze + convert)
+// Audio pipeline (transcribe + analyze)
 // ═══════════════════════════════════════════════════════════════
 
 export function startPipeline(audioPath: string, originalFileName: string, userId?: number): string {
@@ -180,18 +168,15 @@ async function runPipeline(
   try {
     // Step 1: Transcribe
     job.status = "transcribing";
-    job.progress = "[1/3] 语音转写 - 上传中...";
+    job.progress = "[1/2] 语音转写 - 上传中...";
     updateJob(job);
 
     const segments = await transcribe(audioPath, (stage, detail) => {
-      job.progress = `[1/3] 语音转写 - ${detail || stage}`;
+      job.progress = `[1/2] 语音转写 - ${detail || stage}`;
       updateJob(job);
     });
 
-    await runAnalysisAndConvert(job, baseName, segments, audioPath, {
-      analysis: "[2/3]",
-      convert: "[3/3]",
-    });
+    await runAnalysis(job, baseName, segments, audioPath, "[2/2]");
   } catch (err: any) {
     job.status = "error";
     job.error = err.message || String(err);
@@ -240,9 +225,9 @@ async function runTranscriptPipeline(
   const baseName = `${fileBase}_${shortUuid()}`;
 
   try {
-    // Step 0: Parse transcript file
+    // Parse transcript file
     job.status = "analyzing";
-    job.progress = "[1/2] 解析转录文件...";
+    job.progress = "解析转录文件...";
     updateJob(job);
 
     const segments = await parseTranscriptFile(filePath, ext);
@@ -251,10 +236,7 @@ async function runTranscriptPipeline(
       throw new Error("无法解析转录文件：未提取到有效对话片段");
     }
 
-    await runAnalysisAndConvert(job, baseName, segments, filePath, {
-      analysis: "[1/2]",
-      convert: "[2/2]",
-    });
+    await runAnalysis(job, baseName, segments, filePath, "[1/1]");
   } catch (err: any) {
     job.status = "error";
     job.error = err.message || String(err);
@@ -268,7 +250,7 @@ async function runTranscriptPipeline(
 // Startup: restore persisted jobs + cleanup
 // ═══════════════════════════════════════════════════════════════
 
-const IN_PROGRESS_STATUSES: Set<string> = new Set(["uploading", "transcribing", "analyzing", "converting"]);
+const IN_PROGRESS_STATUSES: Set<string> = new Set(["uploading", "transcribing", "analyzing"]);
 
 export function restoreJobs(): void {
   // Clean up old jobs (>24 hours)
