@@ -85,9 +85,20 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
       .catch(() => {});
   }, []);
 
-  const connectSSE = (jobId: string) => {
-    const token = localStorage.getItem('interview_auth_token') || '';
-    const evtSource = new EventSource(`/api/pipeline/events/${jobId}?token=${encodeURIComponent(token)}`);
+  const connectSSE = async (jobId: string) => {
+    // Get a one-time nonce for SSE auth (avoids exposing JWT in URL)
+    let nonce = "";
+    try {
+      const nonceRes = await authFetch("/api/pipeline/nonce", { method: "POST" });
+      if (nonceRes.ok) {
+        const nonceData = await nonceRes.json();
+        nonce = nonceData.nonce;
+      }
+    } catch {
+      // Fall through — SSE will fail with 401
+    }
+
+    const evtSource = new EventSource(`/api/pipeline/events/${jobId}?nonce=${encodeURIComponent(nonce)}`);
 
     evtSource.onmessage = (event) => {
       const data: JobState = JSON.parse(event.data);

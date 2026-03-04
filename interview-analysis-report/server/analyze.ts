@@ -1,17 +1,11 @@
-import OpenAI from "openai";
-import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import type { TranscriptSegment } from "./transcribe.js";
+import { getDashscopeClient, ANALYSIS_MODEL } from "./lib/ai-client.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-dotenv.config({ path: path.resolve(__dirname, "../.env") });
-
-const ANALYSIS_MODEL = "qwen-plus";
-const ANALYSIS_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
 
 // Load reference analysis report
 const refPath = path.resolve(__dirname, "../../reference_analysis.md");
@@ -108,10 +102,7 @@ export async function analyze(
   transcriptText: string,
   onProgress?: (detail: string) => void
 ): Promise<string> {
-  const client = new OpenAI({
-    apiKey: process.env.DASHSCOPE_API_KEY,
-    baseURL: ANALYSIS_BASE_URL,
-  });
+  const client = getDashscopeClient();
 
   onProgress?.(`调用 ${ANALYSIS_MODEL} 分析中...`);
 

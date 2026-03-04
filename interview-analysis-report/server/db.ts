@@ -38,6 +38,17 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(user_id, name)
   );
+
+  CREATE TABLE IF NOT EXISTS pipeline_jobs (
+    id TEXT PRIMARY KEY,
+    user_id INTEGER,
+    file_name TEXT NOT NULL,
+    status TEXT NOT NULL,
+    progress TEXT NOT NULL,
+    error TEXT,
+    result TEXT,
+    created_at INTEGER NOT NULL
+  );
 `);
 
 // Pre-seed invite codes (ignore if already exist)
@@ -153,6 +164,73 @@ export function migrateOrphanReports(userId: number): void {
     }
   });
   migrate();
+}
+
+// ── Pipeline job persistence helpers ──
+
+export interface PersistedJob {
+  id: string;
+  user_id: number | null;
+  file_name: string;
+  status: string;
+  progress: string;
+  error: string | null;
+  result: string | null;
+  created_at: number;
+}
+
+const upsertJobStmt = db.prepare(`
+  INSERT INTO pipeline_jobs (id, user_id, file_name, status, progress, error, result, created_at)
+  VALUES (@id, @user_id, @file_name, @status, @progress, @error, @result, @created_at)
+  ON CONFLICT(id) DO UPDATE SET
+    status = @status,
+    progress = @progress,
+    error = @error,
+    result = @result
+`);
+
+export function saveJob(job: {
+  id: string;
+  fileName: string;
+  status: string;
+  progress: string;
+  createdAt: number;
+  userId?: number;
+  result?: string;
+  error?: string;
+}): void {
+  upsertJobStmt.run({
+    id: job.id,
+    user_id: job.userId ?? null,
+    file_name: job.fileName,
+    status: job.status,
+    progress: job.progress,
+    error: job.error ?? null,
+    result: job.result ?? null,
+    created_at: job.createdAt,
+  });
+}
+
+export function getPersistedJob(id: string): PersistedJob | undefined {
+  return db
+    .prepare("SELECT * FROM pipeline_jobs WHERE id = ?")
+    .get(id) as PersistedJob | undefined;
+}
+
+export function getActiveJobs(userId?: number): PersistedJob[] {
+  if (userId !== undefined) {
+    return db
+      .prepare("SELECT * FROM pipeline_jobs WHERE user_id = ? ORDER BY created_at DESC")
+      .all(userId) as PersistedJob[];
+  }
+  return db
+    .prepare("SELECT * FROM pipeline_jobs ORDER BY created_at DESC")
+    .all() as PersistedJob[];
+}
+
+export function deleteOldJobs(maxAgeMs: number): void {
+  const cutoff = Date.now() - maxAgeMs;
+  db.prepare("DELETE FROM pipeline_jobs WHERE created_at < ?").run(cutoff);
 }
 
 export default db;

@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import crypto from "crypto";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,7 +13,7 @@ import fs from "fs";
 import multer from "multer";
 import jwt from "jsonwebtoken";
 import { convertMdToJson } from "./convert.js";
-import { startPipeline, startTranscriptPipeline, getJob, getAllJobs, addJobListener } from "./pipeline.js";
+import { startPipeline, startTranscriptPipeline, getJob, getAllJobs, addJobListener, restoreJobs } from "./pipeline.js";
 import authRouter, { requireAuth } from "./auth.js";
 import { getReportsByUser, userOwnsReport } from "./db.js";
 
@@ -25,20 +26,33 @@ if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
+// SSE nonce store (short-lived, one-time-use tokens for EventSource auth)
+const sseNonces = new Map<string, { userId: number; expires: number }>();
+
+// Periodically clean expired nonces (every 5 minutes)
+setInterval(() => {
+  const now = Date.now();
+  for (const [nonce, data] of sseNonces) {
+    if (data.expires < now) sseNonces.delete(nonce);
+  }
+}, 5 * 60 * 1000);
+
 const app = express();
 app.use(express.json({ limit: "10mb" }));
 app.use(express.text({ limit: "10mb" }));
 
 // CORS headers
-app.use((_req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  next();
-});
+const allowedOrigins = process.env.NODE_ENV === "production"
+  ? [] // same-origin in production, no CORS needed
+  : ["http://localhost:3000"];
 
-// Preflight — handle OPTIONS in the CORS middleware above
 app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  }
   if (req.method === "OPTIONS") {
     res.sendStatus(204);
     return;
@@ -113,7 +127,11 @@ function loadReport(name: string): object | null {
   const filePath = path.join(DATA_DIR, `${name}_analysis_data.json`);
   if (!fs.existsSync(filePath)) return null;
   const raw = fs.readFileSync(filePath, "utf-8");
-  return JSON.parse(raw);
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
 // GET /api/reports - list user's reports
@@ -158,7 +176,11 @@ app.get("/api/reports/:name/transcript", requireAuth, (req, res) => {
     return;
   }
   const raw = fs.readFileSync(filePath, "utf-8");
-  res.json(JSON.parse(raw));
+  try {
+    res.json(JSON.parse(raw));
+  } catch {
+    res.status(500).json({ error: "转录数据损坏" });
+  }
 });
 
 // POST /api/convert - convert markdown to JSON
@@ -182,8 +204,8 @@ app.post("/api/convert", requireAuth, async (req, res) => {
 
     res.json(result);
   } catch (err: any) {
-    console.error("[API] Convert error:", err.message);
-    res.status(500).json({ error: err.message });
+    console.error("[API] Convert error:", err);
+    res.status(500).json({ error: "内部服务器错误" });
   }
 });
 
@@ -259,21 +281,42 @@ app.get("/api/pipeline/jobs", requireAuth, (req, res) => {
   res.json({ jobs: getAllJobs(req.user!.userId) });
 });
 
+// POST /api/pipeline/nonce - get a one-time nonce for SSE auth
+app.post("/api/pipeline/nonce", requireAuth, (req, res) => {
+  const nonce = crypto.randomUUID();
+  sseNonces.set(nonce, { userId: req.user!.userId, expires: Date.now() + 60_000 });
+  res.json({ nonce });
+});
+
 // GET /api/pipeline/events/:id - SSE endpoint for real-time progress
-// Special auth: accept token from query param OR header (EventSource can't send headers)
+// Auth: accept nonce from query param OR Authorization header (EventSource can't send headers)
 app.get("/api/pipeline/events/:id", (req, res) => {
-  // Manual auth for SSE
-  let token = req.headers.authorization?.replace("Bearer ", "");
-  if (!token && typeof req.query.token === "string") token = req.query.token;
-  if (!token) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
+  let user: { userId: number; username: string } | null = null;
+
+  // Try nonce-based auth first
+  const nonce = typeof req.query.nonce === "string" ? req.query.nonce : null;
+  if (nonce) {
+    const nonceData = sseNonces.get(nonce);
+    if (nonceData && nonceData.expires >= Date.now()) {
+      user = { userId: nonceData.userId, username: "" };
+      sseNonces.delete(nonce); // one-time use
+    }
   }
-  let user: { userId: number; username: string };
-  try {
-    user = jwt.verify(token, process.env.JWT_SECRET!) as any;
-  } catch {
-    res.status(401).json({ error: "Invalid token" });
+
+  // Fall back to Authorization header
+  if (!user) {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (token) {
+      try {
+        user = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      } catch {
+        // invalid token
+      }
+    }
+  }
+
+  if (!user) {
+    res.status(401).json({ error: "Unauthorized" });
     return;
   }
 
@@ -291,12 +334,16 @@ app.get("/api/pipeline/events/:id", (req, res) => {
   }
 
   // Set up SSE headers
-  res.writeHead(200, {
+  const sseHeaders: Record<string, string> = {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
     Connection: "keep-alive",
-    "Access-Control-Allow-Origin": "*",
-  });
+  };
+  const reqOrigin = req.headers.origin;
+  if (reqOrigin && allowedOrigins.includes(reqOrigin)) {
+    sseHeaders["Access-Control-Allow-Origin"] = reqOrigin;
+  }
+  res.writeHead(200, sseHeaders);
 
   // Send current state immediately
   res.write(`data: ${JSON.stringify(job)}\n\n`);
@@ -322,6 +369,9 @@ app.get("/api/pipeline/events/:id", (req, res) => {
     removeListener();
   });
 });
+
+// Restore persisted jobs on startup (mark interrupted ones as error)
+restoreJobs();
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`API server running on http://0.0.0.0:${PORT}`);
