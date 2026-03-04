@@ -50,6 +50,15 @@ function AppInner() {
   useEffect(() => {
     if (isAuthenticated) {
       fetchReports();
+      // Auto-resume upload page if there's an active pipeline job
+      authFetch('/api/pipeline/jobs')
+        .then(res => res.json())
+        .then((jobs: Array<{ status: string }>) => {
+          if (jobs.some(j => !['done', 'error'].includes(j.status))) {
+            setView('upload');
+          }
+        })
+        .catch(() => {});
     }
   }, [isAuthenticated]);
 
