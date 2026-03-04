@@ -12,7 +12,7 @@ import fs from "fs";
 import multer from "multer";
 import jwt from "jsonwebtoken";
 import { convertMdToJson } from "./convert.js";
-import { startPipeline, getJob, getAllJobs, addJobListener } from "./pipeline.js";
+import { startPipeline, startTranscriptPipeline, getJob, getAllJobs, addJobListener } from "./pipeline.js";
 import authRouter, { requireAuth } from "./auth.js";
 import { getReportsByUser, userOwnsReport } from "./db.js";
 
@@ -207,6 +207,38 @@ app.post("/api/pipeline/start", requireAuth, upload.single("audio"), (req, res) 
   res.json({ jobId });
 });
 
+// Multer config for transcript files: 10MB limit, text formats only
+const TRANSCRIPT_EXTS = new Set([".txt", ".json", ".srt", ".vtt", ".docx"]);
+
+const transcriptUpload = multer({
+  dest: UPLOAD_DIR,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (TRANSCRIPT_EXTS.has(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`不支持的转录文件格式: ${ext}，支持 .txt .json .srt .vtt .docx`));
+    }
+  },
+});
+
+// POST /api/pipeline/start-transcript - upload transcript file and start analysis
+app.post("/api/pipeline/start-transcript", requireAuth, transcriptUpload.single("transcript"), (req, res) => {
+  if (!req.file) {
+    res.status(400).json({ error: "未上传转录文件" });
+    return;
+  }
+
+  const filePath = req.file.path;
+  const originalName = Buffer.from(req.file.originalname, "latin1").toString("utf-8");
+
+  console.log(`[API] Transcript pipeline start: ${originalName} -> ${filePath}`);
+  const jobId = startTranscriptPipeline(filePath, originalName, req.user!.userId);
+
+  res.json({ jobId });
+});
+
 // GET /api/pipeline/status/:id - get job status
 app.get("/api/pipeline/status/:id", requireAuth, (req, res) => {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
@@ -300,6 +332,7 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`  GET  /api/reports/{name}        - Get report data`);
   console.log(`  POST /api/convert              - Convert markdown to JSON`);
   console.log(`  POST /api/pipeline/start       - Upload audio & start pipeline`);
+  console.log(`  POST /api/pipeline/start-transcript - Upload transcript & start analysis`);
   console.log(`  GET  /api/pipeline/status/{id} - Get job status`);
   console.log(`  GET  /api/pipeline/jobs        - List all jobs`);
   console.log(`  GET  /api/pipeline/events/{id} - SSE progress stream`);

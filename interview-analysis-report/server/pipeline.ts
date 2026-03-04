@@ -5,6 +5,7 @@ import { transcribe, type TranscriptSegment } from "./transcribe.js";
 import { formatTranscript, analyze } from "./analyze.js";
 import { convertMdToJson } from "./convert.js";
 import { registerReport } from "./db.js";
+import { parseTranscriptFile } from "./parseTranscript.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -156,6 +157,112 @@ async function runPipeline(
       if (fs.existsSync(audioPath)) {
         fs.unlinkSync(audioPath);
         console.log(`[Pipeline] Cleaned up temp file: ${audioPath}`);
+      }
+    } catch {
+      // Ignore cleanup errors
+    }
+  } catch (err: any) {
+    job.status = "error";
+    job.error = err.message || String(err);
+    job.progress = "处理失败";
+    updateJob(job);
+    throw err;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Transcript file pipeline (skip transcription step)
+// ═══════════════════════════════════════════════════════════════
+
+export function startTranscriptPipeline(filePath: string, originalFileName: string, userId?: number): string {
+  const id = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const job: PipelineJob = {
+    id,
+    fileName: originalFileName,
+    status: "uploading",
+    progress: "准备中...",
+    createdAt: Date.now(),
+    userId,
+  };
+  jobs.set(id, job);
+
+  // Run async pipeline - don't await
+  runTranscriptPipeline(job, filePath, originalFileName).catch((err) => {
+    console.error(`[Pipeline] Transcript job ${id} failed:`, err);
+    job.status = "error";
+    job.error = err.message || String(err);
+    job.progress = "处理失败";
+    updateJob(job);
+  });
+
+  return id;
+}
+
+async function runTranscriptPipeline(
+  job: PipelineJob,
+  filePath: string,
+  originalFileName: string
+): Promise<void> {
+  const baseName = path.basename(originalFileName, path.extname(originalFileName));
+  const ext = path.extname(originalFileName);
+  const transcriptPath = path.join(DATA_DIR, `${baseName}_transcript.json`);
+  const analysisPath = path.join(DATA_DIR, `${baseName}_analysis.md`);
+  const analysisJsonPath = path.join(DATA_DIR, `${baseName}_analysis_data.json`);
+
+  try {
+    // Step 0: Parse transcript file
+    job.status = "analyzing";
+    job.progress = "[1/2] 解析转录文件...";
+    updateJob(job);
+
+    const segments = await parseTranscriptFile(filePath, ext);
+
+    if (!segments || segments.length === 0) {
+      throw new Error("无法解析转录文件：未提取到有效对话片段");
+    }
+
+    // Save normalized transcript
+    fs.writeFileSync(transcriptPath, JSON.stringify(segments, null, 2), "utf-8");
+    console.log(`[Pipeline] Saved transcript (${segments.length} segments): ${transcriptPath}`);
+
+    // Step 1: AI Analysis
+    job.progress = "[1/2] AI 分析中...";
+    updateJob(job);
+
+    const transcriptText = formatTranscript(segments);
+    const report = await analyze(transcriptText, (detail) => {
+      job.progress = `[1/2] AI 分析 - ${detail}`;
+      updateJob(job);
+    });
+
+    fs.writeFileSync(analysisPath, report, "utf-8");
+    console.log(`[Pipeline] Saved analysis: ${analysisPath}`);
+
+    // Step 2: Convert to structured JSON
+    job.status = "converting";
+    job.progress = "[2/2] 结构化转换中...";
+    updateJob(job);
+
+    const jsonData = await convertMdToJson(report);
+    fs.writeFileSync(analysisJsonPath, JSON.stringify(jsonData, null, 2), "utf-8");
+    console.log(`[Pipeline] Saved JSON: ${analysisJsonPath}`);
+
+    // Register report ownership
+    if (job.userId) {
+      registerReport(job.userId, baseName);
+    }
+
+    // Done
+    job.status = "done";
+    job.progress = "处理完成";
+    job.result = baseName;
+    updateJob(job);
+
+    // Cleanup temp upload file
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log(`[Pipeline] Cleaned up temp file: ${filePath}`);
       }
     } catch {
       // Ignore cleanup errors
