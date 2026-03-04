@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, FileAudio, FileText, CheckCircle, AlertCircle, Loader, ChevronLeft } from "lucide-react";
+import { Upload, FileAudio, FileText, CheckCircle, AlertCircle, Loader, Sun, Moon, ArrowLeft } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface UploadPageProps {
   onComplete: (reportName: string) => void;
@@ -51,7 +52,8 @@ function formatSize(bytes: number): string {
 }
 
 export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
-  const { authFetch } = useAuth();
+  const { authFetch, logout } = useAuth();
+  const { theme, toggle: toggleTheme } = useTheme();
   const [mode, setMode] = useState<UploadMode>("audio");
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -219,26 +221,42 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100">
-      {/* Header */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
-        <button
-          onClick={onBack}
-          className="inline-flex items-center gap-1 text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors mb-6"
-        >
-          <ChevronLeft size={16} />
-          返回报告列表
-        </button>
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-light tracking-tight text-zinc-900 dark:text-zinc-100">
-            面试洞察 AI
-          </h1>
-          <p className="text-zinc-500 dark:text-zinc-400 font-light">
-            上传面试录音或逐字稿，结合简历及岗位 JD，开始 AI 深度分析。
-          </p>
+      {/* Header — consistent with App.tsx list page */}
+      <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onBack}
+              className="inline-flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+            >
+              <ArrowLeft size={16} />
+              返回
+            </button>
+            <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-700" />
+            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">R</div>
+            <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">上传面试</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              aria-label="Toggle theme"
+            >
+              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+            </button>
+            <button onClick={logout} className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors">退出登录</button>
+          </div>
         </div>
+      </header>
+
+      {/* Subtitle */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-2">
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          上传面试录音或逐字稿，结合简历及岗位 JD，开始 AI 深度分析。
+        </p>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
 
           {/* ===== Left Column (1/3): JD + CV — always visible ===== */}
