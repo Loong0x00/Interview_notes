@@ -10,8 +10,8 @@ import {
   CheckCircle2,
   Search,
   Brain,
-  Briefcase,
-  MessageCircle
+  MessageCircle,
+  ArrowLeft
 } from 'lucide-react';
 import type { AnalysisReport, DialogueStep, TranscriptSegment } from '../types';
 import TranscriptChat from './TranscriptChat';
@@ -312,8 +312,9 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {onBack && (
-              <button onClick={onBack} className="mr-2 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors">
-                &larr;
+              <button onClick={onBack} className="mr-2 flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
+                <ArrowLeft size={16} />
+                <span className="hidden sm:inline">返回主页</span>
               </button>
             )}
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">
@@ -336,10 +337,9 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
             <nav className="sticky top-24 space-y-1">
               {[
                 { id: 'summary', label: '一、候选人表现摘要', icon: CheckCircle2 },
-                { id: 'basic-info', label: '二、基本信息', icon: User },
-                { id: 'questions', label: '三、面试官问题列表', icon: MessageSquare },
-                { id: 'chains', label: '四、对话链分析', icon: TrendingUp },
-                { id: 'focus', label: '五、面试官关注图谱', icon: Target },
+                { id: 'questions', label: '二、面试官问题列表', icon: MessageSquare },
+                { id: 'chains', label: '三、对话链分析', icon: TrendingUp },
+                { id: 'focus', label: '四、面试官关注图谱', icon: Target },
               ].map((item) => (
                 <a
                   key={item.id}
@@ -359,16 +359,6 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
             {/* 1. Candidate Summary */}
             <Section id="summary" title="一、候选人表现摘要" icon={<CheckCircle2 size={20} />}>
               <div className="space-y-6">
-                <Card>
-                  <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                    <Briefcase size={18} className="text-zinc-500 dark:text-zinc-400" /> 关键背景
-                  </div>
-                  <Table
-                    headers={['项目', '内容']}
-                    rows={candidateSummary.background.map(b => [b.label, b.content])}
-                  />
-                </Card>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Card>
                     <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
@@ -407,47 +397,8 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
               </div>
             </Section>
 
-            {/* 2. Basic Info */}
-            <Section id="basic-info" title="二、基本信息" icon={<User size={20} />}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100">角色识别</div>
-                  <Table
-                    headers={['角色', 'Speaker', '判定依据']}
-                    rows={basicInfo.roles.map(r => [
-                      <Badge color={r.role === '候选人' ? 'blue' : 'zinc'}>{r.role}</Badge>,
-                      r.speaker,
-                      r.evidence,
-                    ])}
-                  />
-                </Card>
-
-                <Card>
-                  <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100">面试时长</div>
-                  <div className="p-6 space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-zinc-500 dark:text-zinc-400">总时长</span>
-                      <span className="font-mono font-medium">{basicInfo.duration.totalDuration}</span>
-                    </div>
-                    <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2 overflow-hidden">
-                      <div className="bg-indigo-500 h-2 rounded-full" style={{ width: `${basicInfo.duration.progressPercent}%` }}></div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-xs text-zinc-500 dark:text-zinc-400 pt-2">
-                      <div>
-                        <p>自我介绍: {basicInfo.duration.selfIntroEnd}</p>
-                        <p>正式问答: {basicInfo.duration.formalQARange}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-indigo-600 font-bold text-sm">有效问答: {basicInfo.duration.effectiveQADuration}</p>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            </Section>
-
-            {/* 3. Questions List */}
-            <Section id="questions" title="三、面试官问题列表" icon={<MessageSquare size={20} />}>
+            {/* 2. Questions List */}
+            <Section id="questions" title="二、面试官问题列表" icon={<MessageSquare size={20} />}>
               <div className="flex flex-wrap gap-2 mb-4">
                 {(['全部', '预设', '追问', '澄清'] as const).map(tab => (
                   <button
@@ -531,7 +482,7 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
             </Section>
 
             {/* 4. Dialogue Chains */}
-            <Section id="chains" title="四、对话链分析" icon={<TrendingUp size={20} />}>
+            <Section id="chains" title="三、对话链分析" icon={<TrendingUp size={20} />}>
               {(() => {
                 const sorted = [...dialogueChains].sort((a, b) => b.steps.length - a.steps.length);
                 // Top 2 are key chains (full width), rest are secondary (2-column)
@@ -555,7 +506,7 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
             </Section>
 
             {/* 5. Focus Map */}
-            <Section id="focus" title="五、面试官关注图谱" icon={<Target size={20} />}>
+            <Section id="focus" title="四、面试官关注图谱" icon={<Target size={20} />}>
               <Card className="mb-6">
                 <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100">话题深度热力图</div>
                 <Table

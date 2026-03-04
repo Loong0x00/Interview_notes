@@ -160,41 +160,44 @@ function AppInner() {
     );
   }
 
+  // Sort reports by date descending
+  const sortedReports = [...reports].sort((a, b) => b.date.localeCompare(a.date));
+
   // Report list view
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100">
       <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">R</div>
-            <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Interview Analysis Reports</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            {userMenu}
+            <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">面试分析报告</h1>
             <button
               onClick={() => setView('upload')}
-              className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+              className="ml-2 px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
             >
-              Upload Audio
+              上传新面试
             </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <button onClick={logout} className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors">退出登录</button>
           </div>
         </div>
       </header>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {reports.length === 0 ? (
+        {sortedReports.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-zinc-400 dark:text-zinc-500 text-lg mb-4">No reports yet</p>
+            <p className="text-zinc-400 dark:text-zinc-500 text-lg mb-4">暂无报告</p>
             <button
               onClick={() => setView('upload')}
               className="px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
             >
-              Upload Your First Interview
+              上传第一份面试
             </button>
           </div>
         ) : (
           <div className="space-y-4">
-            {reports.map(report => (
+            {sortedReports.map(report => (
               <button
                 key={report.name}
                 onClick={() => loadReport(report.name)}
