@@ -23,28 +23,24 @@ const TRANSCRIPT_ACCEPT_FORMATS = ".txt,.json,.srt,.vtt,.docx";
 const AUDIO_STEPS = [
   { key: "transcribing", label: "语音转写", num: 1 },
   { key: "analyzing", label: "AI 分析", num: 2 },
-  { key: "converting", label: "结构化转换", num: 3 },
 ];
 
 const TRANSCRIPT_STEPS = [
   { key: "analyzing", label: "AI 分析", num: 1 },
-  { key: "converting", label: "结构化转换", num: 2 },
 ];
 
 function getAudioStepIndex(status: string): number {
   if (status === "uploading") return -1;
   if (status === "transcribing") return 0;
   if (status === "analyzing") return 1;
-  if (status === "converting") return 2;
-  if (status === "done") return 3;
+  if (status === "done") return 2;
   return -1;
 }
 
 function getTranscriptStepIndex(status: string): number {
   if (status === "uploading") return -1;
   if (status === "analyzing") return 0;
-  if (status === "converting") return 1;
-  if (status === "done") return 2;
+  if (status === "done") return 1;
   return -1;
 }
 
