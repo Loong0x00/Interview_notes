@@ -35,11 +35,7 @@ function AppInner() {
       .then(data => {
         if (!data) return;
         setReports(data.reports);
-        if (data.reports.length === 1 && view === 'list') {
-          loadReport(data.reports[0].name);
-        } else {
-          setLoading(false);
-        }
+        setLoading(false);
       })
       .catch(err => {
         setError('Failed to load reports: ' + err.message);
