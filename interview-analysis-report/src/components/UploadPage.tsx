@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Upload, FileAudio, CheckCircle, AlertCircle, Loader } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
 
@@ -43,7 +43,50 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [job, setJob] = useState<JobState | null>(null);
+  const [resumedFileName, setResumedFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Resume in-progress job on mount
+  useEffect(() => {
+    authFetch('/api/pipeline/jobs')
+      .then(res => res.json())
+      .then((jobs: Array<{ id: string; fileName: string; status: string; progress: string; result?: string; error?: string }>) => {
+        const active = jobs.find(j => !['done', 'error'].includes(j.status));
+        if (active) {
+          setResumedFileName(active.fileName);
+          setJob({ id: active.id, status: active.status, progress: active.progress });
+          setUploading(true);
+          connectSSE(active.id);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const connectSSE = (jobId: string) => {
+    const token = localStorage.getItem('interview_auth_token') || '';
+    const evtSource = new EventSource(`/api/pipeline/events/${jobId}?token=${encodeURIComponent(token)}`);
+
+    evtSource.onmessage = (event) => {
+      const data: JobState = JSON.parse(event.data);
+      setJob(data);
+
+      if (data.status === "done") {
+        evtSource.close();
+        setUploading(false);
+        if (data.result) {
+          setTimeout(() => onComplete(data.result!), 1500);
+        }
+      } else if (data.status === "error") {
+        evtSource.close();
+        setUploading(false);
+      }
+    };
+
+    evtSource.onerror = () => {
+      evtSource.close();
+      setUploading(false);
+    };
+  };
 
   const handleFile = useCallback((f: File) => {
     setFile(f);
@@ -98,31 +141,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
 
       const { jobId } = await res.json();
       setJob({ id: jobId, status: "uploading", progress: "已提交..." });
-
-      // Start SSE connection (EventSource doesn't support custom headers, pass token as query param)
-      const token = localStorage.getItem('interview_auth_token') || '';
-      const evtSource = new EventSource(`/api/pipeline/events/${jobId}?token=${encodeURIComponent(token)}`);
-
-      evtSource.onmessage = (event) => {
-        const data: JobState = JSON.parse(event.data);
-        setJob(data);
-
-        if (data.status === "done") {
-          evtSource.close();
-          setUploading(false);
-          if (data.result) {
-            setTimeout(() => onComplete(data.result!), 1500);
-          }
-        } else if (data.status === "error") {
-          evtSource.close();
-          setUploading(false);
-        }
-      };
-
-      evtSource.onerror = () => {
-        evtSource.close();
-        setUploading(false);
-      };
+      connectSSE(jobId);
     } catch (err: any) {
       setJob({
         id: "",
@@ -235,7 +254,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
         {job && (
           <div className="bg-white rounded-xl shadow-sm border border-zinc-200 p-8 mt-0">
             <h2 className="text-lg font-semibold text-zinc-900 mb-6">
-              Processing: {file?.name}
+              处理中：{file?.name || resumedFileName || ''}
             </h2>
 
             {/* Step Tracker */}
