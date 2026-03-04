@@ -143,7 +143,10 @@ const CollapsibleAnswer: React.FC<{ content: string }> = ({ content }) => {
   );
 };
 
-const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({ title, steps }) => (
+const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({ title, steps: rawSteps }) => {
+  // Remove trailing trigger — chain ended, no follow-up question was triggered
+  const steps = rawSteps.length > 0 && rawSteps[rawSteps.length - 1].type === 'trigger' ? rawSteps.slice(0, -1) : rawSteps;
+  return (
   <Card className="mb-6">
     <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/50 flex justify-between items-center">
       <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{title}</h3>
@@ -197,7 +200,8 @@ const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({
       </div>
     </div>
   </Card>
-);
+  );
+};
 
 // --- Helpers ---
 
