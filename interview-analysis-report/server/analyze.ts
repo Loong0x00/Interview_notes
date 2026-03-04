@@ -311,11 +311,11 @@ export function formatTranscript(segments: TranscriptSegment[]): string {
 export async function analyze(
   transcriptText: string,
   context?: { jdText?: string; cvText?: string },
-  onProgress?: (detail: string) => void
+  onProgress?: (detail: string, percent?: number) => void
 ): Promise<object> {
   const client = getDashscopeClient();
 
-  onProgress?.(`调用 ${ANALYSIS_MODEL} 分析中...`);
+  onProgress?.(`调用 ${ANALYSIS_MODEL} 分析中...`, 15);
 
   const hasJD = !!context?.jdText;
   const hasCV = !!context?.cvText;
@@ -330,23 +330,44 @@ export async function analyze(
     userMessage += `\n\n---\n\n## 候选人简历（CV）\n\n${context.cvText}`;
   }
 
-  const response = await client.chat.completions.create({
-    model: ANALYSIS_MODEL,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userMessage },
-    ],
-    temperature: 0.3,
-    max_tokens: 20000,
-  });
+  // Use a simulated progress timer during LLM call (typical ~60-120s)
+  let progressTimer: ReturnType<typeof setInterval> | null = null;
+  let currentPercent = 15;
+  progressTimer = setInterval(() => {
+    // Slowly increase from 15% to 85%, decelerating as it gets higher
+    if (currentPercent < 85) {
+      const increment = Math.max(1, Math.floor((90 - currentPercent) / 15));
+      currentPercent = Math.min(85, currentPercent + increment);
+      onProgress?.(`${ANALYSIS_MODEL} 生成中...`, currentPercent);
+    }
+  }, 5000);
 
-  const usage = response.usage;
-  if (usage) {
-    console.log(
-      `  Token: 输入 ${usage.prompt_tokens} + 输出 ${usage.completion_tokens} = ${usage.total_tokens}`
-    );
+  try {
+    const response = await client.chat.completions.create({
+      model: ANALYSIS_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage },
+      ],
+      temperature: 0.3,
+      max_tokens: 20000,
+    });
+
+    if (progressTimer) clearInterval(progressTimer);
+    onProgress?.("解析结果中...", 90);
+
+    const usage = response.usage;
+    if (usage) {
+      console.log(
+        `  Token: 输入 ${usage.prompt_tokens} + 输出 ${usage.completion_tokens} = ${usage.total_tokens}`
+      );
+    }
+
+    const raw = stripCodeFences(response.choices[0].message.content?.trim() || "");
+    onProgress?.("分析完成", 100);
+    return JSON.parse(raw);
+  } catch (err) {
+    if (progressTimer) clearInterval(progressTimer);
+    throw err;
   }
-
-  const raw = stripCodeFences(response.choices[0].message.content?.trim() || "");
-  return JSON.parse(raw);
 }

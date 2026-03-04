@@ -24,6 +24,7 @@ export interface PipelineJob {
   fileName: string;
   status: JobStatus;
   progress: string;
+  progressPercent?: number; // 0-100, real progress within current step
   createdAt: number;
   userId?: number;
   result?: string; // report name for loading
@@ -101,11 +102,15 @@ async function runAnalysis(
   // AI Analysis (directly outputs JSON)
   job.status = "analyzing";
   job.progress = `${stepPrefix} AI 分析中...`;
+  job.progressPercent = 10;
   updateJob(job);
 
   const transcriptText = formatTranscript(segments);
-  const jsonData = await analyze(transcriptText, context, (detail) => {
+  const jsonData = await analyze(transcriptText, context, (detail, percent) => {
     job.progress = `${stepPrefix} AI 分析 - ${detail}`;
+    if (percent !== undefined) {
+      job.progressPercent = percent;
+    }
     updateJob(job);
   });
 
@@ -181,10 +186,14 @@ async function runPipeline(
     // Step 1: Transcribe
     job.status = "transcribing";
     job.progress = "[1/2] 语音转写 - 上传中...";
+    job.progressPercent = 5;
     updateJob(job);
 
-    const segments = await transcribe(audioPath, (stage, detail) => {
+    const segments = await transcribe(audioPath, (stage, detail, percent) => {
       job.progress = `[1/2] 语音转写 - ${detail || stage}`;
+      if (percent !== undefined) {
+        job.progressPercent = percent;
+      }
       updateJob(job);
     });
 
@@ -241,6 +250,7 @@ async function runTranscriptPipeline(
     // Parse transcript file
     job.status = "analyzing";
     job.progress = "解析转录文件...";
+    job.progressPercent = 5;
     updateJob(job);
 
     const segments = await parseTranscriptFile(filePath, ext);

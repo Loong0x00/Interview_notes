@@ -208,16 +208,18 @@ function parseResult(result: any): TranscriptSegment[] {
 
 export async function transcribe(
   audioPath: string,
-  onProgress?: (stage: string, detail?: string) => void
+  onProgress?: (stage: string, detail?: string, percent?: number) => void
 ): Promise<TranscriptSegment[]> {
-  onProgress?.("uploading", "正在上传音频文件...");
+  onProgress?.("uploading", "正在上传音频文件...", 10);
   const { orderId } = await uploadAudio(audioPath);
 
-  onProgress?.("transcribing", "正在转写，请等待...");
+  onProgress?.("transcribing", "正在转写，请等待...", 20);
   const result = await pollResult(orderId, (attempt, max) => {
-    onProgress?.("transcribing", `轮询中 (${attempt}/${max})...`);
+    // 20% ~ 90% maps to polling progress
+    const pct = Math.round(20 + (attempt / max) * 70);
+    onProgress?.("transcribing", `轮询中 (${attempt}/${max})...`, pct);
   });
 
-  onProgress?.("parsing", "正在解析结果...");
+  onProgress?.("parsing", "正在解析结果...", 95);
   return parseResult(result);
 }

@@ -12,6 +12,7 @@ interface JobState {
   id: string;
   status: string;
   progress: string;
+  progressPercent?: number;
   error?: string;
   result?: string;
 }
@@ -428,18 +429,34 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                           <div
                             className={`h-full rounded-full transition-all duration-700 ease-out ${
                               isDone
-                                ? "w-full bg-emerald-500 dark:bg-emerald-400"
+                                ? "bg-emerald-500 dark:bg-emerald-400"
                                 : isActive
-                                ? "w-2/3 bg-indigo-500 dark:bg-indigo-400"
-                                : "w-0 bg-zinc-300 dark:bg-zinc-600"
+                                ? "bg-indigo-500 dark:bg-indigo-400"
+                                : "bg-zinc-300 dark:bg-zinc-600"
                             }`}
+                            style={{
+                              width: isDone
+                                ? "100%"
+                                : isActive && job?.progressPercent
+                                ? `${job.progressPercent}%`
+                                : isActive
+                                ? "10%"
+                                : "0%",
+                            }}
                           />
                         </div>
-                        {/* Show progress text under the active bar */}
+                        {/* Show progress text + percent under the active bar */}
                         {isActive && job && (
-                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
-                            {job.progress}
-                          </p>
+                          <div className="flex justify-between items-center">
+                            <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                              {job.progress}
+                            </p>
+                            {job.progressPercent !== undefined && (
+                              <span className="text-[10px] font-medium text-indigo-500 dark:text-indigo-400">
+                                {job.progressPercent}%
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                     );
