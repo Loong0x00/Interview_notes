@@ -4,7 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { transcribe, type TranscriptSegment } from "./transcribe.js";
 import { formatTranscript, analyze } from "./analyze.js";
-import { registerReport, saveJob, getPersistedJob, getActiveJobs, deleteOldJobs } from "./db.js";
+import { registerReport, saveJob, getPersistedJob, getActiveJobs, deleteOldJobs, saveReportContext } from "./db.js";
 import { parseTranscriptFile } from "./parseTranscript.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -28,6 +28,11 @@ export interface PipelineJob {
   userId?: number;
   result?: string; // report name for loading
   error?: string;
+}
+
+export interface PipelineContext {
+  jdText?: string;
+  cvText?: string;
 }
 
 const jobs = new Map<string, PipelineJob>();
@@ -83,7 +88,8 @@ async function runAnalysis(
   baseName: string,
   segments: TranscriptSegment[],
   tempFilePath: string,
-  stepPrefix: string
+  stepPrefix: string,
+  context?: PipelineContext
 ): Promise<void> {
   const transcriptPath = path.join(DATA_DIR, `${baseName}_transcript.json`);
   const analysisJsonPath = path.join(DATA_DIR, `${baseName}_analysis_data.json`);
@@ -98,13 +104,18 @@ async function runAnalysis(
   updateJob(job);
 
   const transcriptText = formatTranscript(segments);
-  const jsonData = await analyze(transcriptText, (detail) => {
+  const jsonData = await analyze(transcriptText, context, (detail) => {
     job.progress = `${stepPrefix} AI 分析 - ${detail}`;
     updateJob(job);
   });
 
   fs.writeFileSync(analysisJsonPath, JSON.stringify(jsonData, null, 2), "utf-8");
   console.log(`[Pipeline] Saved analysis JSON: ${analysisJsonPath}`);
+
+  // Save JD/CV context if provided
+  if (context?.jdText || context?.cvText) {
+    saveReportContext(baseName, context?.jdText ?? null, context?.cvText ?? null);
+  }
 
   // Register report ownership
   if (job.userId) {
@@ -132,7 +143,7 @@ async function runAnalysis(
 // Audio pipeline (transcribe + analyze)
 // ═══════════════════════════════════════════════════════════════
 
-export function startPipeline(audioPath: string, originalFileName: string, userId?: number): string {
+export function startPipeline(audioPath: string, originalFileName: string, userId?: number, context?: PipelineContext): string {
   const id = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const job: PipelineJob = {
     id,
@@ -146,7 +157,7 @@ export function startPipeline(audioPath: string, originalFileName: string, userI
   saveJob(job);
 
   // Run async pipeline - don't await
-  runPipeline(job, audioPath, originalFileName).catch((err) => {
+  runPipeline(job, audioPath, originalFileName, context).catch((err) => {
     console.error(`[Pipeline] Job ${id} failed:`, err);
     job.status = "error";
     job.error = err.message || String(err);
@@ -160,7 +171,8 @@ export function startPipeline(audioPath: string, originalFileName: string, userI
 async function runPipeline(
   job: PipelineJob,
   audioPath: string,
-  originalFileName: string
+  originalFileName: string,
+  context?: PipelineContext
 ): Promise<void> {
   const fileBase = path.basename(originalFileName, path.extname(originalFileName));
   const baseName = `${fileBase}_${shortUuid()}`;
@@ -176,7 +188,7 @@ async function runPipeline(
       updateJob(job);
     });
 
-    await runAnalysis(job, baseName, segments, audioPath, "[2/2]");
+    await runAnalysis(job, baseName, segments, audioPath, "[2/2]", context);
   } catch (err: any) {
     job.status = "error";
     job.error = err.message || String(err);
@@ -190,7 +202,7 @@ async function runPipeline(
 // Transcript file pipeline (skip transcription step)
 // ═══════════════════════════════════════════════════════════════
 
-export function startTranscriptPipeline(filePath: string, originalFileName: string, userId?: number): string {
+export function startTranscriptPipeline(filePath: string, originalFileName: string, userId?: number, context?: PipelineContext): string {
   const id = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const job: PipelineJob = {
     id,
@@ -204,7 +216,7 @@ export function startTranscriptPipeline(filePath: string, originalFileName: stri
   saveJob(job);
 
   // Run async pipeline - don't await
-  runTranscriptPipeline(job, filePath, originalFileName).catch((err) => {
+  runTranscriptPipeline(job, filePath, originalFileName, context).catch((err) => {
     console.error(`[Pipeline] Transcript job ${id} failed:`, err);
     job.status = "error";
     job.error = err.message || String(err);
@@ -218,7 +230,8 @@ export function startTranscriptPipeline(filePath: string, originalFileName: stri
 async function runTranscriptPipeline(
   job: PipelineJob,
   filePath: string,
-  originalFileName: string
+  originalFileName: string,
+  context?: PipelineContext
 ): Promise<void> {
   const fileBase = path.basename(originalFileName, path.extname(originalFileName));
   const ext = path.extname(originalFileName);
@@ -236,7 +249,7 @@ async function runTranscriptPipeline(
       throw new Error("无法解析转录文件：未提取到有效对话片段");
     }
 
-    await runAnalysis(job, baseName, segments, filePath, "[1/1]");
+    await runAnalysis(job, baseName, segments, filePath, "[1/1]", context);
   } catch (err: any) {
     job.status = "error";
     job.error = err.message || String(err);

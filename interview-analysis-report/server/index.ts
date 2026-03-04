@@ -13,9 +13,10 @@ import fs from "fs";
 import multer from "multer";
 import jwt from "jsonwebtoken";
 import { convertMdToJson } from "./convert.js";
-import { startPipeline, startTranscriptPipeline, getJob, getAllJobs, addJobListener, restoreJobs } from "./pipeline.js";
+import { startPipeline, startTranscriptPipeline, getJob, getAllJobs, addJobListener, restoreJobs, type PipelineContext } from "./pipeline.js";
 import authRouter, { requireAuth } from "./auth.js";
-import { getReportsByUser, userOwnsReport } from "./db.js";
+import { getReportsByUser, userOwnsReport, getReportContext } from "./db.js";
+import { extractCVText } from "./parseCV.js";
 
 const PORT = 8000;
 const DATA_DIR = path.resolve(__dirname, "../../");
@@ -63,12 +64,16 @@ app.use((req, res, next) => {
 // Multer config: store to disk, 500MB limit
 const ALLOWED_EXTS = new Set([".m4a", ".mp3", ".wav", ".flac", ".mp4", ".aac", ".ogg", ".wma"]);
 
-const upload = multer({
+const CV_EXTS = new Set([".pdf", ".docx", ".doc", ".txt"]);
+
+const audioUpload = multer({
   dest: UPLOAD_DIR,
   limits: { fileSize: 500 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    if (ALLOWED_EXTS.has(ext)) {
+    if (file.fieldname === "cv") {
+      cb(null, CV_EXTS.has(ext));
+    } else if (ALLOWED_EXTS.has(ext)) {
       cb(null, true);
     } else {
       cb(new Error(`不支持的文件格式: ${ext}`));
@@ -183,6 +188,25 @@ app.get("/api/reports/:name/transcript", requireAuth, (req, res) => {
   }
 });
 
+// GET /api/reports/:name/context - get JD/CV context for a report
+app.get("/api/reports/:name/context", requireAuth, (req, res) => {
+  const name = sanitizeName(req.params.name);
+  if (!name) {
+    res.status(400).json({ error: "Invalid report name" });
+    return;
+  }
+  if (!userOwnsReport(req.user!.userId, name)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  const context = getReportContext(name);
+  if (!context) {
+    res.json({ jd_text: null, cv_text: null });
+    return;
+  }
+  res.json(context);
+});
+
 // POST /api/convert - convert markdown to JSON
 app.post("/api/convert", requireAuth, async (req, res) => {
   try {
@@ -214,17 +238,36 @@ app.post("/api/convert", requireAuth, async (req, res) => {
 // ═══════════════════════════════════════════════════════════════
 
 // POST /api/pipeline/start - upload audio and start pipeline
-app.post("/api/pipeline/start", requireAuth, upload.single("audio"), (req, res) => {
-  if (!req.file) {
+app.post("/api/pipeline/start", requireAuth, audioUpload.fields([{ name: "audio", maxCount: 1 }, { name: "cv", maxCount: 1 }]), async (req, res) => {
+  const files = req.files as Record<string, Express.Multer.File[]>;
+  const audioFile = files["audio"]?.[0];
+  if (!audioFile) {
     res.status(400).json({ error: "未上传音频文件" });
     return;
   }
 
-  const audioPath = req.file.path;
-  const originalName = Buffer.from(req.file.originalname, "latin1").toString("utf-8");
+  const audioPath = audioFile.path;
+  const originalName = Buffer.from(audioFile.originalname, "latin1").toString("utf-8");
 
-  console.log(`[API] Pipeline start: ${originalName} -> ${audioPath}`);
-  const jobId = startPipeline(audioPath, originalName, req.user!.userId);
+  // Build context from JD text and CV file
+  const context: PipelineContext = {};
+  const jdText = typeof req.body.jdText === "string" ? req.body.jdText.trim().slice(0, 3000) : undefined;
+  if (jdText) context.jdText = jdText;
+
+  const cvFile = files["cv"]?.[0];
+  if (cvFile) {
+    try {
+      const cvExt = path.extname(cvFile.originalname);
+      context.cvText = await extractCVText(cvFile.path, cvExt);
+    } catch (err) {
+      console.error("[API] CV extraction error:", err);
+    } finally {
+      try { fs.unlinkSync(cvFile.path); } catch { /* ignore */ }
+    }
+  }
+
+  console.log(`[API] Pipeline start: ${originalName} -> ${audioPath}${context.jdText ? " [+JD]" : ""}${context.cvText ? " [+CV]" : ""}`);
+  const jobId = startPipeline(audioPath, originalName, req.user!.userId, Object.keys(context).length > 0 ? context : undefined);
 
   res.json({ jobId });
 });
@@ -237,7 +280,9 @@ const transcriptUpload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    if (TRANSCRIPT_EXTS.has(ext)) {
+    if (file.fieldname === "cv") {
+      cb(null, CV_EXTS.has(ext));
+    } else if (TRANSCRIPT_EXTS.has(ext)) {
       cb(null, true);
     } else {
       cb(new Error(`不支持的转录文件格式: ${ext}，支持 .txt .json .srt .vtt .docx`));
@@ -246,17 +291,36 @@ const transcriptUpload = multer({
 });
 
 // POST /api/pipeline/start-transcript - upload transcript file and start analysis
-app.post("/api/pipeline/start-transcript", requireAuth, transcriptUpload.single("transcript"), (req, res) => {
-  if (!req.file) {
+app.post("/api/pipeline/start-transcript", requireAuth, transcriptUpload.fields([{ name: "transcript", maxCount: 1 }, { name: "cv", maxCount: 1 }]), async (req, res) => {
+  const files = req.files as Record<string, Express.Multer.File[]>;
+  const transcriptFile = files["transcript"]?.[0];
+  if (!transcriptFile) {
     res.status(400).json({ error: "未上传转录文件" });
     return;
   }
 
-  const filePath = req.file.path;
-  const originalName = Buffer.from(req.file.originalname, "latin1").toString("utf-8");
+  const filePath = transcriptFile.path;
+  const originalName = Buffer.from(transcriptFile.originalname, "latin1").toString("utf-8");
 
-  console.log(`[API] Transcript pipeline start: ${originalName} -> ${filePath}`);
-  const jobId = startTranscriptPipeline(filePath, originalName, req.user!.userId);
+  // Build context from JD text and CV file
+  const context: PipelineContext = {};
+  const jdText = typeof req.body.jdText === "string" ? req.body.jdText.trim().slice(0, 3000) : undefined;
+  if (jdText) context.jdText = jdText;
+
+  const cvFile = files["cv"]?.[0];
+  if (cvFile) {
+    try {
+      const cvExt = path.extname(cvFile.originalname);
+      context.cvText = await extractCVText(cvFile.path, cvExt);
+    } catch (err) {
+      console.error("[API] CV extraction error:", err);
+    } finally {
+      try { fs.unlinkSync(cvFile.path); } catch { /* ignore */ }
+    }
+  }
+
+  console.log(`[API] Transcript pipeline start: ${originalName} -> ${filePath}${context.jdText ? " [+JD]" : ""}${context.cvText ? " [+CV]" : ""}`);
+  const jobId = startTranscriptPipeline(filePath, originalName, req.user!.userId, Object.keys(context).length > 0 ? context : undefined);
 
   res.json({ jobId });
 });

@@ -1,7 +1,7 @@
 import type { TranscriptSegment } from "./transcribe.js";
 import { getDashscopeClient, ANALYSIS_MODEL, stripCodeFences } from "./lib/ai-client.js";
 
-const JSON_SCHEMA = `{
+const BASE_JSON_SCHEMA = `{
   "meta": {
     "position": "岗位名称",
     "date": "分析日期",
@@ -60,10 +60,28 @@ const JSON_SCHEMA = `{
     "risks": [
       { "label": "技术深度有限", "description": "描述" }
     ]
-  }
-}`;
+  }`;
 
-const SYSTEM_PROMPT = `你是一位资深的面试分析专家。你的任务是对面试对话转录文本进行深度结构化分析，直接输出JSON格式。
+const JD_JSON_SCHEMA = `,
+  "positionSummary": {
+    "responsibilities": ["核心职责1", "核心职责2"],
+    "workIntensity": "工作强度描述",
+    "keyKPIs": ["KPI1", "KPI2"],
+    "teamCulture": "团队氛围描述",
+    "requirements": ["硬性要求1", "硬性要求2"],
+    "highlights": "JD中的亮点或特殊要求"
+  },
+  "fitAnalysis": {
+    "overallScore": 75,
+    "dimensions": [
+      { "dimension": "维度名称", "jdRequirement": "JD要求", "candidateEvidence": "候选人面试证据", "score": 80, "comment": "评价" }
+    ],
+    "strengths": ["优势匹配点1"],
+    "gaps": ["差距1"],
+    "recommendation": "综合推荐意见"
+  }`;
+
+const BASE_STEPS = `你是一位资深的面试分析专家。你的任务是对面试对话转录文本进行深度结构化分析，直接输出JSON格式。
 
 ## 分析步骤
 
@@ -105,13 +123,47 @@ const SYSTEM_PROMPT = `你是一位资深的面试分析专家。你的任务是
 对每个高关注话题**单独分析**面试官在验证什么能力，给出洞察。
 
 ### Step 6：候选人表现摘要
-提取候选人的关键背景、展现的能力、以及潜在短板/风险点。
+提取候选人的关键背景、展现的能力、以及潜在短板/风险点。`;
+
+const STEP_7_JD = `
+### Step 7：岗位摘要（从JD中提取）
+从提供的岗位描述（JD）中提取以下信息：
+- 核心职责：该岗位的主要工作内容
+- 工作强度：从JD暗示的工作节奏（如加班、弹性等线索）
+- 主要KPI：该岗位的核心考核维度
+- 团队氛围：从JD语言风格推断的团队文化
+- 硬性要求：学历、技能、经验等门槛
+- JD亮点：特殊福利、发展机会等`;
+
+const STEP_8_FIT = `
+### Step 8：契合度分析
+基于JD要求和候选人在面试中的实际表现，进行多维度人岗匹配分析：
+- 对JD中每个核心要求，在面试对话中找到候选人展现的对应证据
+- 给出0-100的维度匹配分数和简短评价
+- 总结优势匹配点和明显差距
+- 给出综合推荐意见（如"强烈推荐"/"推荐"/"待定"/"不推荐"）
+- overallScore 是所有维度分数的加权平均（能力权重高于背景）`;
+
+function buildSystemPrompt(options?: { hasJD?: boolean; hasCV?: boolean }): string {
+  let steps = BASE_STEPS;
+  if (options?.hasJD) {
+    steps += STEP_7_JD;
+    steps += STEP_8_FIT;
+  }
+
+  let jsonSchema = BASE_JSON_SCHEMA;
+  if (options?.hasJD) {
+    jsonSchema += JD_JSON_SCHEMA;
+  }
+  jsonSchema += "\n}";
+
+  return `${steps}
 
 ## 输出JSON格式
 
 严格按照以下JSON schema输出，不要添加或删除任何字段：
 
-${JSON_SCHEMA}
+${jsonSchema}
 
 ## 字段说明
 
@@ -133,7 +185,9 @@ ${JSON_SCHEMA}
 - focusMap.insights: 深挖维度分析，一般有2条（极高关注和高关注）
   - points是关键考察点列表
   - coreQuestion是核心问题总结（如果有的话）
-- candidateSummary: 候选人背景、能力、风险点
+- candidateSummary: 候选人背景、能力、风险点${options?.hasJD ? `
+- positionSummary: 岗位JD摘要信息
+- fitAnalysis: 人岗契合度分析，dimensions为各维度评分，overallScore为加权平均分` : ""}
 
 ## 重要要求
 
@@ -146,6 +200,7 @@ ${JSON_SCHEMA}
 - 候选人回答要展示具体内容，不要笼统概括
 - 分析要有洞察性，不要只是复述对话
 - dialogueChains中每条链的steps要完整保留所有问答交互`;
+}
 
 export function formatTranscript(segments: TranscriptSegment[]): string {
   return segments
@@ -159,23 +214,34 @@ export function formatTranscript(segments: TranscriptSegment[]): string {
 
 export async function analyze(
   transcriptText: string,
+  context?: { jdText?: string; cvText?: string },
   onProgress?: (detail: string) => void
 ): Promise<object> {
   const client = getDashscopeClient();
 
   onProgress?.(`调用 ${ANALYSIS_MODEL} 分析中...`);
 
+  const hasJD = !!context?.jdText;
+  const hasCV = !!context?.cvText;
+  const systemPrompt = buildSystemPrompt({ hasJD, hasCV });
+
+  let userMessage = `以下是面试对话转录文本，请按要求进行完整分析并直接输出JSON：\n\n${transcriptText}`;
+
+  if (context?.jdText) {
+    userMessage += `\n\n---\n\n## 岗位描述（JD）\n\n${context.jdText}`;
+  }
+  if (context?.cvText) {
+    userMessage += `\n\n---\n\n## 候选人简历（CV）\n\n${context.cvText}`;
+  }
+
   const response = await client.chat.completions.create({
     model: ANALYSIS_MODEL,
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      {
-        role: "user",
-        content: `以下是面试对话转录文本，请按要求进行完整分析并直接输出JSON：\n\n${transcriptText}`,
-      },
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userMessage },
     ],
     temperature: 0.3,
-    max_tokens: 16000,
+    max_tokens: 20000,
   });
 
   const usage = response.usage;

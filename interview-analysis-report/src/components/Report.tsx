@@ -11,7 +11,9 @@ import {
   Search,
   Brain,
   MessageCircle,
-  ArrowLeft
+  ArrowLeft,
+  Briefcase,
+  BarChart3,
 } from 'lucide-react';
 import type { AnalysisReport, DialogueStep, TranscriptSegment } from '../types';
 import TranscriptChat from './TranscriptChat';
@@ -335,29 +337,112 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
           {/* Sidebar Navigation */}
           <aside className="hidden lg:block lg:col-span-3">
             <nav className="sticky top-24 space-y-1">
-              {[
-                { id: 'summary', label: '一、候选人表现摘要', icon: CheckCircle2 },
-                { id: 'questions', label: '二、面试官问题列表', icon: MessageSquare },
-                { id: 'chains', label: '三、对话链分析', icon: TrendingUp },
-                { id: 'focus', label: '四、面试官关注图谱', icon: Target },
-              ].map((item) => (
-                <a
-                  key={item.id}
-                  href={`#${item.id}`}
-                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-400 rounded-lg hover:bg-white dark:hover:bg-zinc-800 hover:text-indigo-600 hover:shadow-sm dark:hover:shadow-zinc-900/50 transition-all group"
-                >
-                  <item.icon size={16} className="group-hover:text-indigo-600 transition-colors" />
-                  {item.label}
-                </a>
-              ))}
+              {(() => {
+                const chineseNumbers = ['一', '二', '三', '四', '五', '六', '七', '八'];
+                const navItems = [
+                  data.positionSummary ? { id: 'position', label: '岗位摘要', icon: Briefcase } : null,
+                  { id: 'summary', label: '候选人表现摘要', icon: CheckCircle2 },
+                  { id: 'questions', label: '面试官问题列表', icon: MessageSquare },
+                  { id: 'chains', label: '对话链分析', icon: TrendingUp },
+                  { id: 'focus', label: '面试官关注图谱', icon: Target },
+                  data.fitAnalysis ? { id: 'fit', label: '契合度分析', icon: BarChart3 } : null,
+                ].filter(Boolean) as { id: string; label: string; icon: React.FC<any> }[];
+                return navItems.map((item, idx) => (
+                  <a
+                    key={item.id}
+                    href={`#${item.id}`}
+                    className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-400 rounded-lg hover:bg-white dark:hover:bg-zinc-800 hover:text-indigo-600 hover:shadow-sm dark:hover:shadow-zinc-900/50 transition-all group"
+                  >
+                    <item.icon size={16} className="group-hover:text-indigo-600 transition-colors" />
+                    {chineseNumbers[idx]}、{item.label}
+                  </a>
+                ));
+              })()}
             </nav>
           </aside>
 
           {/* Main Content */}
           <main className="lg:col-span-9 space-y-12">
 
-            {/* 1. Candidate Summary */}
-            <Section id="summary" title="一、候选人表现摘要" icon={<CheckCircle2 size={20} />}>
+            {/* Dynamic section numbering */}
+            {(() => {
+              const chineseNumbers = ['一', '二', '三', '四', '五', '六', '七', '八'];
+              let sectionIdx = 0;
+              const nextNum = () => chineseNumbers[sectionIdx++];
+              const positionNum = data.positionSummary ? nextNum() : '';
+              const summaryNum = nextNum();
+              const questionsNum = nextNum();
+              const chainsNum = nextNum();
+              const focusNum = nextNum();
+              const fitNum = data.fitAnalysis ? nextNum() : '';
+
+              return (<>
+
+            {/* Position Summary (conditional) */}
+            {data.positionSummary && (
+              <Section id="position" title={`${positionNum}、岗位摘要`} icon={<Briefcase size={20} />}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card>
+                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100">
+                      核心职责与要求
+                    </div>
+                    <div className="p-6 space-y-4">
+                      {data.positionSummary.responsibilities.map((r, i) => (
+                        <div key={i} className="flex gap-3">
+                          <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-2 shrink-0" />
+                          <span className="text-sm text-zinc-700 dark:text-zinc-300">{r}</span>
+                        </div>
+                      ))}
+                      {data.positionSummary.requirements.length > 0 && (
+                        <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
+                          {data.positionSummary.requirements.map((r, i) => (
+                            <div key={i} className="flex gap-3">
+                              <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 shrink-0" />
+                              <span className="text-sm text-zinc-700 dark:text-zinc-300">{r}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                  <Card>
+                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100">
+                      工作环境
+                    </div>
+                    <div className="p-6 space-y-4">
+                      <div className="text-sm">
+                        <span className="font-semibold text-zinc-900 dark:text-zinc-100">工作强度：</span>
+                        <span className="text-zinc-600 dark:text-zinc-400">{data.positionSummary.workIntensity}</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-semibold text-zinc-900 dark:text-zinc-100">团队文化：</span>
+                        <span className="text-zinc-600 dark:text-zinc-400">{data.positionSummary.teamCulture}</span>
+                      </div>
+                      {data.positionSummary.keyKPIs.length > 0 && (
+                        <div className="space-y-2">
+                          <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">关键 KPI：</span>
+                          {data.positionSummary.keyKPIs.map((kpi, i) => (
+                            <div key={i} className="flex gap-3 ml-2">
+                              <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-2 shrink-0" />
+                              <span className="text-sm text-zinc-600 dark:text-zinc-400">{kpi}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {data.positionSummary.highlights && (
+                        <div className="text-sm">
+                          <span className="font-semibold text-zinc-900 dark:text-zinc-100">亮点：</span>
+                          <span className="text-zinc-600 dark:text-zinc-400">{data.positionSummary.highlights}</span>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                </div>
+              </Section>
+            )}
+
+            {/* Candidate Summary */}
+            <Section id="summary" title={`${summaryNum}、候选人表现摘要`} icon={<CheckCircle2 size={20} />}>
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Card>
@@ -397,8 +482,8 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
               </div>
             </Section>
 
-            {/* 2. Questions List */}
-            <Section id="questions" title="二、面试官问题列表" icon={<MessageSquare size={20} />}>
+            {/* Questions List */}
+            <Section id="questions" title={`${questionsNum}、面试官问题列表`} icon={<MessageSquare size={20} />}>
               <div className="flex flex-wrap gap-2 mb-4">
                 {(['全部', '预设', '追问', '澄清'] as const).map(tab => (
                   <button
@@ -481,8 +566,8 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
               </div>
             </Section>
 
-            {/* 4. Dialogue Chains */}
-            <Section id="chains" title="三、对话链分析" icon={<TrendingUp size={20} />}>
+            {/* Dialogue Chains */}
+            <Section id="chains" title={`${chainsNum}、对话链分析`} icon={<TrendingUp size={20} />}>
               {(() => {
                 const sorted = [...dialogueChains].sort((a, b) => b.steps.length - a.steps.length);
                 // Top 2 are key chains (full width), rest are secondary (2-column)
@@ -505,8 +590,8 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
               })()}
             </Section>
 
-            {/* 5. Focus Map */}
-            <Section id="focus" title="四、面试官关注图谱" icon={<Target size={20} />}>
+            {/* Focus Map */}
+            <Section id="focus" title={`${focusNum}、面试官关注图谱`} icon={<Target size={20} />}>
               <Card className="mb-6">
                 <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100">话题深度热力图</div>
                 <Table
@@ -561,6 +646,75 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                 )}
               </div>
             </Section>
+
+            {/* Fit Analysis (conditional) */}
+            {data.fitAnalysis && (
+              <Section id="fit" title={`${fitNum}、契合度分析`} icon={<BarChart3 size={20} />}>
+                {/* Overall Score */}
+                <Card className="mb-6">
+                  <div className="p-6 flex flex-col items-center text-center">
+                    <div className={`text-5xl font-bold mb-2 ${
+                      data.fitAnalysis.overallScore >= 80 ? 'text-emerald-600 dark:text-emerald-400' :
+                      data.fitAnalysis.overallScore >= 60 ? 'text-amber-600 dark:text-amber-400' :
+                      'text-red-600 dark:text-red-400'
+                    }`}>
+                      {data.fitAnalysis.overallScore}
+                    </div>
+                    <div className="text-sm text-zinc-500 dark:text-zinc-400 mb-3">综合契合度评分</div>
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300 max-w-lg leading-relaxed">
+                      {data.fitAnalysis.recommendation}
+                    </p>
+                  </div>
+                </Card>
+
+                {/* Dimensions Table */}
+                <Card className="mb-6">
+                  <Table
+                    headers={['维度', 'JD 要求', '候选人证据', '得分', '评价']}
+                    rows={data.fitAnalysis.dimensions.map(d => [
+                      d.dimension,
+                      d.jdRequirement,
+                      d.candidateEvidence,
+                      <Badge color={d.score >= 80 ? 'green' : d.score >= 60 ? 'amber' : 'red'}>{d.score}</Badge>,
+                      d.comment,
+                    ])}
+                  />
+                </Card>
+
+                {/* Strengths & Gaps */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card>
+                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100">
+                      优势匹配
+                    </div>
+                    <div className="p-6 space-y-3">
+                      {data.fitAnalysis.strengths.map((s, i) => (
+                        <div key={i} className="flex gap-3">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0" />
+                          <span className="text-sm text-zinc-700 dark:text-zinc-300">{s}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                  <Card>
+                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100">
+                      待提升
+                    </div>
+                    <div className="p-6 space-y-3">
+                      {data.fitAnalysis.gaps.map((g, i) => (
+                        <div key={i} className="flex gap-3">
+                          <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 shrink-0" />
+                          <span className="text-sm text-zinc-700 dark:text-zinc-300">{g}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                </div>
+              </Section>
+            )}
+
+              </>);
+            })()}
 
             <footer className="text-center text-zinc-400 dark:text-zinc-500 text-sm py-12 border-t border-zinc-200 dark:border-zinc-700 mt-12">
               <p>本报告由 AI 分析层（{meta.model}）依据 CLAUDE.md 5步分析流程生成</p>

@@ -87,6 +87,31 @@ export interface ReportMeta {
   source: string;      // e.g. "讯飞 ASR v2 转写结构化 JSON"
 }
 
+export interface PositionSummary {
+  responsibilities: string[];
+  workIntensity: string;
+  keyKPIs: string[];
+  teamCulture: string;
+  requirements: string[];
+  highlights: string;
+}
+
+export interface FitDimension {
+  dimension: string;
+  jdRequirement: string;
+  candidateEvidence: string;
+  score: number;
+  comment: string;
+}
+
+export interface FitAnalysis {
+  overallScore: number;
+  dimensions: FitDimension[];
+  strengths: string[];
+  gaps: string[];
+  recommendation: string;
+}
+
 export interface AnalysisReport {
   meta: ReportMeta;
   basicInfo: BasicInfo;
@@ -98,6 +123,8 @@ export interface AnalysisReport {
     insights: FocusInsight[];
   };
   candidateSummary: CandidateSummary;
+  positionSummary?: PositionSummary;
+  fitAnalysis?: FitAnalysis;
 }
 
 export interface TranscriptSegment {
