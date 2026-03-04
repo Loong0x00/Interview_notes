@@ -144,8 +144,19 @@ const CollapsibleAnswer: React.FC<{ content: string }> = ({ content }) => {
 };
 
 const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({ title, steps: rawSteps }) => {
-  // Remove trailing trigger — chain ended, no follow-up question was triggered
-  const steps = rawSteps.length > 0 && rawSteps[rawSteps.length - 1].type === 'trigger' ? rawSteps.slice(0, -1) : rawSteps;
+  // Filter out trigger steps — they'll be rendered inline below their preceding answer
+  const steps = rawSteps.filter(s => s.type !== 'trigger');
+  // Build a map: for each answer step index in rawSteps, find its following trigger
+  const triggerAfter = new Map<number, DialogueStep>();
+  for (let i = 0; i < rawSteps.length - 1; i++) {
+    if (rawSteps[i].type === 'answer' && rawSteps[i + 1].type === 'trigger') {
+      triggerAfter.set(i, rawSteps[i + 1]);
+    }
+  }
+  // Map filtered step indices back to rawSteps indices for trigger lookup
+  const rawIndices: number[] = [];
+  rawSteps.forEach((s, i) => { if (s.type !== 'trigger') rawIndices.push(i); });
+
   return (
   <Card className="mb-6">
     <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/50 flex justify-between items-center">
@@ -153,7 +164,9 @@ const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({
     </div>
     <div className="p-6">
       <div className="relative pl-8 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-200 dark:before:bg-zinc-700">
-        {steps.map((step, idx) => (
+        {steps.map((step, idx) => {
+          const trigger = triggerAfter.get(rawIndices[idx]);
+          return (
           <motion.div
             key={idx}
             initial={{ opacity: 0, x: -10 }}
@@ -164,12 +177,10 @@ const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({
           >
             <div className={`absolute -left-[29px] w-6 h-6 rounded-full border-2 flex items-center justify-center z-10 bg-white dark:bg-zinc-900
               ${step.type === 'question' ? 'border-blue-500 text-blue-500' :
-                step.type === 'trigger' ? 'border-amber-500 text-amber-500' :
                 step.type === 'clarification' ? 'border-purple-500 text-purple-500' :
                 'border-emerald-500 text-emerald-500'}`}>
               <div className={`w-2 h-2 rounded-full ${
                  step.type === 'question' ? 'bg-blue-500' :
-                 step.type === 'trigger' ? 'bg-amber-500' :
                  step.type === 'clarification' ? 'bg-purple-500' :
                  'bg-emerald-500'
               }`} />
@@ -179,24 +190,32 @@ const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({
               <div className="flex items-center gap-2 mb-1">
                 <span className={`text-xs font-bold uppercase tracking-wider
                   ${step.type === 'question' ? 'text-blue-600' :
-                    step.type === 'trigger' ? 'text-amber-600' :
                     step.type === 'clarification' ? 'text-purple-600' :
                     'text-emerald-600'}`}>
-                  {step.label || (step.type === 'question' ? '面试官提问' : step.type === 'trigger' ? '触发关键词' : step.type === 'clarification' ? '面试官澄清' : '候选人回答')}
+                  {step.label || (step.type === 'question' ? '面试官提问' : step.type === 'clarification' ? '面试官澄清' : '候选人回答')}
                 </span>
                 {step.time && <span className="text-xs text-zinc-400 dark:text-zinc-500 font-mono">{step.time}</span>}
               </div>
 
               {step.type === 'answer' ? (
-                <CollapsibleAnswer content={step.content} />
+                <>
+                  <CollapsibleAnswer content={step.content} />
+                  {trigger && (
+                    <div className="mt-2 flex items-start gap-1.5 text-xs">
+                      <span className="shrink-0 px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 font-medium">触发追问</span>
+                      <span className="text-amber-700 dark:text-amber-300 leading-relaxed">"{trigger.content}"</span>
+                    </div>
+                  )}
+                </>
               ) : (
-                <div className={`text-sm leading-relaxed ${step.type === 'trigger' ? 'font-mono text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950 p-2 rounded border border-amber-100 dark:border-amber-800 inline-block' : 'text-zinc-700 dark:text-zinc-300'}`}>
+                <div className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
                   {step.content}
                 </div>
               )}
             </div>
           </motion.div>
-        ))}
+          );
+        })}
       </div>
     </div>
   </Card>
