@@ -511,17 +511,18 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
             <Section id="chains" title="四、对话链分析" icon={<TrendingUp size={20} />}>
               {(() => {
                 const sorted = [...dialogueChains].sort((a, b) => b.steps.length - a.steps.length);
-                const important = sorted.filter(c => c.steps.length >= 4);
-                const minor = sorted.filter(c => c.steps.length < 4);
+                // Top 2 are key chains (full width), rest are secondary (2-column)
+                const key = sorted.slice(0, 2);
+                const rest = sorted.slice(2);
                 return (
                   <>
-                    {important.map((chain, idx) => (
-                      <DialogueChainView key={`imp-${idx}`} title={chain.title} steps={chain.steps} />
+                    {key.map((chain, idx) => (
+                      <DialogueChainView key={`key-${idx}`} title={chain.title} steps={chain.steps} />
                     ))}
-                    {minor.length > 0 && (
+                    {rest.length > 0 && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {minor.map((chain, idx) => (
-                          <DialogueChainView key={`min-${idx}`} title={chain.title} steps={chain.steps} />
+                        {rest.map((chain, idx) => (
+                          <DialogueChainView key={`rest-${idx}`} title={chain.title} steps={chain.steps} />
                         ))}
                       </div>
                     )}
