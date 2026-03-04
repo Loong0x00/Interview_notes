@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, FileAudio, CheckCircle, AlertCircle, Loader } from "lucide-react";
+import { Upload, FileAudio, FileText, CheckCircle, AlertCircle, Loader } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
 
 interface UploadPageProps {
@@ -15,19 +15,36 @@ interface JobState {
   result?: string;
 }
 
-const ACCEPT_FORMATS = ".m4a,.mp3,.wav,.flac,.mp4,.aac,.ogg,.wma";
-const STEPS = [
+type UploadMode = "audio" | "transcript";
+
+const AUDIO_ACCEPT_FORMATS = ".m4a,.mp3,.wav,.flac,.mp4,.aac,.ogg,.wma";
+const TRANSCRIPT_ACCEPT_FORMATS = ".txt,.json,.srt,.vtt,.docx";
+
+const AUDIO_STEPS = [
   { key: "transcribing", label: "语音转写", num: 1 },
   { key: "analyzing", label: "AI 分析", num: 2 },
   { key: "converting", label: "结构化转换", num: 3 },
 ];
 
-function getStepIndex(status: string): number {
+const TRANSCRIPT_STEPS = [
+  { key: "analyzing", label: "AI 分析", num: 1 },
+  { key: "converting", label: "结构化转换", num: 2 },
+];
+
+function getAudioStepIndex(status: string): number {
   if (status === "uploading") return -1;
   if (status === "transcribing") return 0;
   if (status === "analyzing") return 1;
   if (status === "converting") return 2;
   if (status === "done") return 3;
+  return -1;
+}
+
+function getTranscriptStepIndex(status: string): number {
+  if (status === "uploading") return -1;
+  if (status === "analyzing") return 0;
+  if (status === "converting") return 1;
+  if (status === "done") return 2;
   return -1;
 }
 
@@ -39,12 +56,18 @@ function formatSize(bytes: number): string {
 
 export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
   const { authFetch } = useAuth();
+  const [mode, setMode] = useState<UploadMode>("audio");
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [job, setJob] = useState<JobState | null>(null);
   const [resumedFileName, setResumedFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const steps = mode === "audio" ? AUDIO_STEPS : TRANSCRIPT_STEPS;
+  const totalSteps = steps.length;
+  const getStepIndex = mode === "audio" ? getAudioStepIndex : getTranscriptStepIndex;
+  const acceptFormats = mode === "audio" ? AUDIO_ACCEPT_FORMATS : TRANSCRIPT_ACCEPT_FORMATS;
 
   // Resume in-progress job on mount
   useEffect(() => {
@@ -121,15 +144,32 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
     [handleFile]
   );
 
+  const switchMode = useCallback((newMode: UploadMode) => {
+    setMode(newMode);
+    setFile(null);
+    setJob(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, []);
+
   const startUpload = useCallback(async () => {
     if (!file) return;
     setUploading(true);
 
     try {
       const formData = new FormData();
-      formData.append("audio", file);
+      if (mode === "audio") {
+        formData.append("audio", file);
+      } else {
+        formData.append("transcript", file);
+      }
 
-      const res = await authFetch("/api/pipeline/start", {
+      const endpoint = mode === "audio"
+        ? "/api/pipeline/start"
+        : "/api/pipeline/start-transcript";
+
+      const res = await authFetch(endpoint, {
         method: "POST",
         body: formData,
       });
@@ -151,9 +191,11 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
       });
       setUploading(false);
     }
-  }, [file, onComplete, authFetch]);
+  }, [file, mode, onComplete, authFetch]);
 
   const stepIndex = job ? getStepIndex(job.status) : -2;
+
+  const FileIcon = mode === "audio" ? FileAudio : FileText;
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100">
@@ -164,7 +206,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
               R
             </div>
             <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-              Upload Interview Audio
+              {mode === "audio" ? "Upload Interview Audio" : "Upload Transcript"}
             </h1>
           </div>
           <button
@@ -177,6 +219,34 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
       </header>
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Mode Toggle */}
+        {!job && (
+          <div className="flex justify-center mb-6">
+            <div className="inline-flex rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-1">
+              <button
+                onClick={() => switchMode("audio")}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  mode === "audio"
+                    ? "bg-indigo-600 text-white"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                }`}
+              >
+                音频文件
+              </button>
+              <button
+                onClick={() => switchMode("transcript")}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  mode === "transcript"
+                    ? "bg-indigo-600 text-white"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                }`}
+              >
+                转录文件
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Drop Zone */}
         {!job && (
           <div
@@ -199,14 +269,14 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
             <input
               ref={fileInputRef}
               type="file"
-              accept={ACCEPT_FORMATS}
+              accept={acceptFormats}
               onChange={onFileSelect}
               className="hidden"
             />
 
             {file ? (
               <div className="space-y-3">
-                <FileAudio className="w-12 h-12 text-indigo-500 mx-auto" />
+                <FileIcon className="w-12 h-12 text-indigo-500 mx-auto" />
                 <div>
                   <p className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
                     {file.name}
@@ -219,7 +289,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                   Click or drag to replace
                 </p>
               </div>
-            ) : (
+            ) : mode === "audio" ? (
               <div className="space-y-3">
                 <Upload className="w-12 h-12 text-zinc-400 mx-auto" />
                 <div>
@@ -228,6 +298,18 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                   </p>
                   <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1">
                     Supported: M4A, MP3, WAV, FLAC, MP4, AAC, OGG, WMA
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <Upload className="w-12 h-12 text-zinc-400 mx-auto" />
+                <div>
+                  <p className="text-lg font-medium text-zinc-700 dark:text-zinc-300">
+                    拖拽转录文件到此处或点击选择
+                  </p>
+                  <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1">
+                    支持：TXT, JSON, SRT, VTT, DOCX（飞书、钉钉、腾讯会议、通义听悟导出）
                   </p>
                 </div>
               </div>
@@ -259,7 +341,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
 
             {/* Step Tracker */}
             <div className="space-y-4">
-              {STEPS.map((step, i) => {
+              {steps.map((step, i) => {
                 const isActive = stepIndex === i;
                 const isDone = stepIndex > i || job.status === "done";
                 const isPending = stepIndex < i && job.status !== "done";
@@ -292,7 +374,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                             : "text-zinc-400 dark:text-zinc-500"
                         }`}
                       >
-                        [{step.num}/3] {step.label}
+                        [{step.num}/{totalSteps}] {step.label}
                       </p>
                       {isActive && (
                         <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
