@@ -1,493 +1,141 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, FileAudio, FileText, CheckCircle, AlertCircle, Loader, ChevronDown, ChevronRight } from "lucide-react";
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState } from 'react';
+import { motion } from 'motion/react';
+import { Upload, CheckCircle2, MessageSquare, Filter, BarChart3 } from 'lucide-react';
 
-interface UploadPageProps {
-  onComplete: (reportName: string) => void;
-  onBack: () => void;
-}
+// --- 核心状态与逻辑 (需放在组件内部) ---
+/*
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadType, setUploadType] = useState<'audio' | 'transcript'>('audio');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentStage, setCurrentStage] = useState<'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'generating'>('idle');
+  const [jdText, setJdText] = useState('');
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
 
-interface JobState {
-  id: string;
-  status: string;
-  progress: string;
-  error?: string;
-  result?: string;
-}
+  const stages = [
+    { id: 'uploading', label: '上传 (Uploading)' },
+    { id: 'transcribing', label: '转文字 (Transcribing)' },
+    { id: 'analyzing', label: 'AI 分析 (AI Analyzing)' },
+    { id: 'generating', label: '报告生成 (Generating Report)' }
+  ];
+*/
 
-type UploadMode = "audio" | "transcript";
-
-const AUDIO_ACCEPT_FORMATS = ".m4a,.mp3,.wav,.flac,.mp4,.aac,.ogg,.wma";
-const TRANSCRIPT_ACCEPT_FORMATS = ".txt,.json,.srt,.vtt,.docx";
-
-const AUDIO_STEPS = [
-  { key: "transcribing", label: "语音转写", num: 1 },
-  { key: "analyzing", label: "AI 分析", num: 2 },
-];
-
-const TRANSCRIPT_STEPS = [
-  { key: "analyzing", label: "AI 分析", num: 1 },
-];
-
-function getAudioStepIndex(status: string): number {
-  if (status === "uploading") return -1;
-  if (status === "transcribing") return 0;
-  if (status === "analyzing") return 1;
-  if (status === "done") return 2;
-  return -1;
-}
-
-function getTranscriptStepIndex(status: string): number {
-  if (status === "uploading") return -1;
-  if (status === "analyzing") return 0;
-  if (status === "done") return 1;
-  return -1;
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-}
-
-export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
-  const { authFetch } = useAuth();
-  const [mode, setMode] = useState<UploadMode>("audio");
-  const [file, setFile] = useState<File | null>(null);
-  const [dragging, setDragging] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [job, setJob] = useState<JobState | null>(null);
-  const [resumedFileName, setResumedFileName] = useState<string | null>(null);
-  const [jdText, setJdText] = useState("");
-  const [cvFile, setCvFile] = useState<File | null>(null);
-  const [showContext, setShowContext] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cvInputRef = useRef<HTMLInputElement>(null);
-
-  const steps = mode === "audio" ? AUDIO_STEPS : TRANSCRIPT_STEPS;
-  const totalSteps = steps.length;
-  const getStepIndex = mode === "audio" ? getAudioStepIndex : getTranscriptStepIndex;
-  const acceptFormats = mode === "audio" ? AUDIO_ACCEPT_FORMATS : TRANSCRIPT_ACCEPT_FORMATS;
-
-  // Resume in-progress job on mount
-  useEffect(() => {
-    authFetch('/api/pipeline/jobs')
-      .then(res => res.json())
-      .then((jobs: Array<{ id: string; fileName: string; status: string; progress: string; result?: string; error?: string }>) => {
-        const active = jobs.find(j => !['done', 'error'].includes(j.status));
-        if (active) {
-          setResumedFileName(active.fileName);
-          setJob({ id: active.id, status: active.status, progress: active.progress });
-          setUploading(true);
-          connectSSE(active.id);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  const connectSSE = async (jobId: string) => {
-    // Get a one-time nonce for SSE auth (avoids exposing JWT in URL)
-    let nonce = "";
-    try {
-      const nonceRes = await authFetch("/api/pipeline/nonce", { method: "POST" });
-      if (nonceRes.ok) {
-        const nonceData = await nonceRes.json();
-        nonce = nonceData.nonce;
-      }
-    } catch {
-      // Fall through — SSE will fail with 401
-    }
-
-    const evtSource = new EventSource(`/api/pipeline/events/${jobId}?nonce=${encodeURIComponent(nonce)}`);
-
-    evtSource.onmessage = (event) => {
-      const data: JobState = JSON.parse(event.data);
-      setJob(data);
-
-      if (data.status === "done") {
-        evtSource.close();
-        setUploading(false);
-        if (data.result) {
-          setTimeout(() => onComplete(data.result!), 1500);
-        }
-      } else if (data.status === "error") {
-        evtSource.close();
-        setUploading(false);
-      }
-    };
-
-    evtSource.onerror = () => {
-      evtSource.close();
-      setUploading(false);
-    };
-  };
-
-  const handleFile = useCallback((f: File) => {
-    setFile(f);
-    setJob(null);
-  }, []);
-
-  const onDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragging(true);
-  }, []);
-
-  const onDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragging(false);
-  }, []);
-
-  const onDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setDragging(false);
-      const f = e.dataTransfer.files[0];
-      if (f) handleFile(f);
-    },
-    [handleFile]
-  );
-
-  const onFileSelect = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const f = e.target.files?.[0];
-      if (f) handleFile(f);
-    },
-    [handleFile]
-  );
-
-  const switchMode = useCallback((newMode: UploadMode) => {
-    setMode(newMode);
-    setFile(null);
-    setJob(null);
-    setJdText("");
-    setCvFile(null);
-    setShowContext(false);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  }, []);
-
-  const startUpload = useCallback(async () => {
-    if (!file) return;
-    setUploading(true);
-
-    try {
-      const formData = new FormData();
-      if (mode === "audio") {
-        formData.append("audio", file);
-      } else {
-        formData.append("transcript", file);
-      }
-      if (jdText.trim()) {
-        formData.append("jdText", jdText.trim());
-      }
-      if (cvFile) {
-        formData.append("cv", cvFile);
-      }
-
-      const endpoint = mode === "audio"
-        ? "/api/pipeline/start"
-        : "/api/pipeline/start-transcript";
-
-      const res = await authFetch(endpoint, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "上传失败");
-      }
-
-      const { jobId } = await res.json();
-      setJob({ id: jobId, status: "uploading", progress: "已提交..." });
-      connectSSE(jobId);
-    } catch (err: any) {
-      setJob({
-        id: "",
-        status: "error",
-        progress: "上传失败",
-        error: err.message,
-      });
-      setUploading(false);
-    }
-  }, [file, mode, onComplete, authFetch]);
-
-  const stepIndex = job ? getStepIndex(job.status) : -2;
-
-  const FileIcon = mode === "audio" ? FileAudio : FileText;
-
+// --- 上传页面组件代码块 ---
+const UploadScreen = () => {
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100">
-      <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">
-              R
-            </div>
-            <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-              {mode === "audio" ? "Upload Interview Audio" : "Upload Transcript"}
-            </h1>
-          </div>
-          <button
-            onClick={onBack}
-            className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
-          >
-            Back to Reports
-          </button>
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-4xl w-full space-y-8"
+      >
+        {/* 标题区域 */}
+        <div className="text-center space-y-2">
+          <h1 className="text-4xl font-light tracking-tight text-gray-900">面试洞察 AI</h1>
+          <p className="text-gray-500 font-light">上传面试录音或逐字稿，结合简历及岗位 JD，开始 AI 深度分析。</p>
         </div>
-      </header>
 
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Mode Toggle */}
-        {!job && (
-          <div className="flex justify-center mb-6">
-            <div className="inline-flex rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-1">
-              <button
-                onClick={() => switchMode("audio")}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                  mode === "audio"
-                    ? "bg-indigo-600 text-white"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
-                }`}
-              >
-                音频文件
-              </button>
-              <button
-                onClick={() => switchMode("transcript")}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                  mode === "transcript"
-                    ? "bg-indigo-600 text-white"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
-                }`}
-              >
-                转录文件
-              </button>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* 左侧：上下文输入 (JD & 简历) */}
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-gray-400">岗位 JD (选填)</label>
+              <textarea
+                value={jdText}
+                onChange={(e) => setJdText(e.target.value)}
+                placeholder="粘贴岗位描述..."
+                className="w-full h-32 p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm focus:ring-2 focus:ring-black/5 transition-all resize-none"
+              />
             </div>
-          </div>
-        )}
-
-        {/* Drop Zone */}
-        {!job && (
-          <div
-            onDragOver={onDragOver}
-            onDragLeave={onDragLeave}
-            onDrop={onDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`
-              border-2 border-dashed rounded-xl p-12 text-center cursor-pointer
-              transition-all duration-200
-              ${
-                dragging
-                  ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950"
-                  : file
-                  ? "border-indigo-300 bg-white dark:bg-zinc-900"
-                  : "border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 hover:border-indigo-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
-              }
-            `}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={acceptFormats}
-              onChange={onFileSelect}
-              className="hidden"
-            />
-
-            {file ? (
-              <div className="space-y-3">
-                <FileIcon className="w-12 h-12 text-indigo-500 mx-auto" />
-                <div>
-                  <p className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                    {file.name}
-                  </p>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                    {formatSize(file.size)}
-                  </p>
-                </div>
-                <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                  Click or drag to replace
-                </p>
-              </div>
-            ) : mode === "audio" ? (
-              <div className="space-y-3">
-                <Upload className="w-12 h-12 text-zinc-400 mx-auto" />
-                <div>
-                  <p className="text-lg font-medium text-zinc-700 dark:text-zinc-300">
-                    Drag audio file here or click to browse
-                  </p>
-                  <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1">
-                    Supported: M4A, MP3, WAV, FLAC, MP4, AAC, OGG, WMA
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <Upload className="w-12 h-12 text-zinc-400 mx-auto" />
-                <div>
-                  <p className="text-lg font-medium text-zinc-700 dark:text-zinc-300">
-                    拖拽转录文件到此处或点击选择
-                  </p>
-                  <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1">
-                    支持：TXT, JSON, SRT, VTT, DOCX（飞书、钉钉、腾讯会议、通义听悟导出）
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Optional Context: JD + CV */}
-        {file && !job && (
-          <div className="mt-4">
-            <button
-              onClick={() => setShowContext(!showContext)}
-              className="flex items-center gap-2 text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
-            >
-              {showContext ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              附加信息（可选）
-            </button>
-            {showContext && (
-              <div className="mt-3 space-y-3">
-                <textarea
-                  value={jdText}
-                  onChange={(e) => setJdText(e.target.value)}
-                  rows={4}
-                  placeholder="粘贴岗位描述 JD（可选，提供后将生成岗位摘要和契合度分析）"
-                  className="w-full px-4 py-3 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-vertical"
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-gray-400">求职者简历 (选填)</label>
+              <div className="relative group border-2 border-dashed border-gray-100 rounded-2xl p-6 transition-all hover:border-gray-300 cursor-pointer bg-gray-50/50 flex flex-col items-center justify-center space-y-2">
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
+                  className="absolute inset-0 opacity-0 cursor-pointer"
                 />
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => cvInputRef.current?.click()}
-                    className="px-3 py-1.5 text-xs font-medium rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:border-indigo-300 hover:text-indigo-600 transition-colors"
-                  >
-                    选择简历文件
-                  </button>
-                  <input
-                    ref={cvInputRef}
-                    type="file"
-                    accept=".pdf,.docx"
-                    onChange={(e) => setCvFile(e.target.files?.[0] || null)}
-                    className="hidden"
-                  />
-                  {cvFile && (
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">{cvFile.name}</span>
-                  )}
+                <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center">
+                  <Upload className="w-5 h-5 text-gray-400" />
                 </div>
+                <span className="text-xs font-medium text-gray-500">
+                  {resumeFile ? resumeFile.name : '上传 PDF 或 Word 简历'}
+                </span>
               </div>
-            )}
+            </div>
           </div>
-        )}
 
-        {/* Upload Button */}
-        {file && !job && (
-          <div className="mt-6 flex justify-center">
-            <button
-              onClick={startUpload}
-              disabled={uploading}
-              className="px-8 py-3 bg-indigo-600 text-white font-medium rounded-lg
-                hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed
-                transition-colors shadow-sm"
-            >
-              {uploading ? "Uploading..." : "Start Analysis"}
-            </button>
-          </div>
-        )}
-
-        {/* Progress Section */}
-        {job && (
-          <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm dark:shadow-zinc-900/50 border border-zinc-200 dark:border-zinc-700 p-8 mt-0">
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-6">
-              处理中：{file?.name || resumedFileName || ''}
-            </h2>
-
-            {/* Step Tracker */}
-            <div className="space-y-4">
-              {steps.map((step, i) => {
-                const isActive = stepIndex === i;
-                const isDone = stepIndex > i || job.status === "done";
-                const isPending = stepIndex < i && job.status !== "done";
-
-                return (
-                  <div key={step.key} className="flex items-center gap-4">
-                    <div
-                      className={`
-                        w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0
-                        ${isDone ? "bg-green-100 dark:bg-green-950 text-green-600 dark:text-green-400" : ""}
-                        ${isActive ? "bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400" : ""}
-                        ${isPending ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500" : ""}
-                      `}
-                    >
-                      {isDone ? (
-                        <CheckCircle className="w-5 h-5" />
-                      ) : isActive ? (
-                        <Loader className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <span className="text-sm font-medium">{step.num}</span>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <p
-                        className={`font-medium ${
-                          isDone
-                            ? "text-green-700 dark:text-green-300"
-                            : isActive
-                            ? "text-indigo-700 dark:text-indigo-300"
-                            : "text-zinc-400 dark:text-zinc-500"
-                        }`}
-                      >
-                        [{step.num}/{totalSteps}] {step.label}
-                      </p>
-                      {isActive && (
-                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-                          {job.progress}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+          {/* 右侧两栏：主上传区与进度追踪 */}
+          <div className="md:col-span-2 space-y-6">
+            {/* 类型切换按钮 */}
+            <div className="flex bg-gray-100 p-1 rounded-2xl w-fit">
+              <button
+                onClick={() => setUploadType('audio')}
+                className={`px-6 py-2 rounded-xl text-xs font-bold transition-all ${uploadType === 'audio' ? 'bg-white shadow-sm text-black' : 'text-gray-500'}`}
+              >
+                面试录音
+              </button>
+              <button
+                onClick={() => setUploadType('transcript')}
+                className={`px-6 py-2 rounded-xl text-xs font-bold transition-all ${uploadType === 'transcript' ? 'bg-white shadow-sm text-black' : 'text-gray-500'}`}
+              >
+                面试逐字稿
+              </button>
             </div>
 
-            {/* Done State */}
-            {job.status === "done" && (
-              <div className="mt-8 p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg text-center">
-                <CheckCircle className="w-8 h-8 text-green-500 dark:text-green-400 mx-auto mb-2" />
-                <p className="text-green-800 dark:text-green-300 font-medium">
-                  Analysis complete! Redirecting to report...
-                </p>
-              </div>
-            )}
-
-            {/* Error State */}
-            {job.status === "error" && (
-              <div className="mt-8 p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-red-800 dark:text-red-300 font-medium">Processing Failed</p>
-                    <p className="text-red-600 dark:text-red-400 text-sm mt-1">
-                      {job.error || "Unknown error"}
-                    </p>
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* 点击上传区域 */}
+              <div
+                onClick={!isUploading ? handleUpload : undefined}
+                className={`group relative h-[280px] border-2 border-dashed border-gray-200 rounded-3xl p-8 transition-all hover:border-gray-400 cursor-pointer bg-gray-50/50 flex flex-col items-center justify-center text-center ${isUploading ? 'pointer-events-none opacity-50' : ''}`}
+              >
+                <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform mb-4">
+                  <Upload className="w-8 h-8 text-gray-400" />
                 </div>
-                <button
-                  onClick={() => {
-                    setJob(null);
-                    setFile(null);
-                    setJdText("");
-                    setCvFile(null);
-                    setShowContext(false);
-                  }}
-                  className="mt-4 px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
-                >
-                  Try Again
-                </button>
+                <div className="space-y-1">
+                  <p className="text-sm font-bold">点击上传{uploadType === 'audio' ? '录音' : '逐字稿'}</p>
+                  <p className="text-xs text-gray-400">
+                    {uploadType === 'audio' ? '支持 MP3, WAV, M4A' : '支持 Word, TXT, PDF'}
+                  </p>
+                </div>
               </div>
-            )}
+
+              {/* 进度追踪面板 */}
+              <div className="bg-gray-50/50 rounded-3xl p-8 flex flex-col justify-center space-y-6 border border-gray-100">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">处理进度</h3>
+                <div className="space-y-6">
+                  {stages.map((stage, idx) => {
+                    const isCurrent = currentStage === stage.id;
+                    const isDone = stages.findIndex(s => s.id === currentStage) > idx;
+
+                    return (
+                      <div key={stage.id} className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className={`text-[10px] font-bold uppercase tracking-wider ${isCurrent ? 'text-black' : isDone ? 'text-emerald-500' : 'text-gray-400'}`}>
+                            {stage.label}
+                          </span>
+                          {isDone && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
+                        </div>
+                        <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{
+                              width: isDone ? '100%' : isCurrent ? `${uploadProgress}%` : '0%'
+                            }}
+                            className={`h-full rounded-full ${isDone ? 'bg-emerald-500' : 'bg-black'}`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      </motion.div>
     </div>
   );
-}
+};
+
+export default UploadScreen;
