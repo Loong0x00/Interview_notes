@@ -82,6 +82,9 @@ ${JSON_SCHEMA}
   - question类型的step需要label（如"Q1 预设"）
   - answer类型的step需要time（如"68s~173s"）
   - trigger类型的step只需content
+  - **链条内逻辑规则**：trigger必须紧跟在answer后面，且与下一个question/clarification存在因果关系
+  - 每个问题编号只能出现在一条链中，不能跨链重复
+  - 如果原文链条中存在逻辑跳跃（trigger与下一个问题无关），转换时应将无关部分拆分为新链条
 - focusMap.topics: 从"话题深度热力图"表格提取
 - focusMap.insights: 从深挖维度分析中提取，每个分析段落一条。一般有2条（极高关注和高关注）
   - insights的level对应"极高关注"或"高关注"
