@@ -249,39 +249,34 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
         </div>
       </header>
 
-      {/* Subtitle */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-2">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          上传面试录音或逐字稿，结合简历及岗位 JD，开始 AI 深度分析。
-        </p>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
 
-          {/* ===== Left Column (1/3): JD + CV — always visible ===== */}
+          {/* ===== Left Column (1/3): JD + CV ===== */}
           <div className="space-y-6">
             {/* JD Textarea */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-                岗位 JD (选填)
-              </label>
+            <div className="space-y-3">
+              <div>
+                <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">岗位 JD</h2>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">选填 - 提供后将生成岗位画像与契合度</p>
+              </div>
               <textarea
                 value={jdText}
                 onChange={(e) => setJdText(e.target.value)}
                 placeholder="粘贴岗位描述..."
-                className="w-full h-36 p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:focus:ring-indigo-400/30 transition-all resize-none"
+                className="w-full h-40 p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:focus:ring-indigo-400/30 transition-all resize-none"
               />
             </div>
 
             {/* CV Upload */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-                求职者简历 (选填)
-              </label>
+            <div className="space-y-3">
+              <div>
+                <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">求职者简历</h2>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">选填 - 支持 PDF、Word</p>
+              </div>
               <div
                 onClick={() => cvInputRef.current?.click()}
-                className="relative group border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-2xl p-6 transition-all hover:border-zinc-400 dark:hover:border-zinc-500 cursor-pointer bg-white/50 dark:bg-zinc-900/50 flex flex-col items-center justify-center space-y-2"
+                className="relative group border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl p-6 transition-all hover:border-indigo-300 dark:hover:border-indigo-600 cursor-pointer bg-white dark:bg-zinc-900 flex flex-col items-center justify-center space-y-2"
               >
                 <input
                   ref={cvInputRef}
@@ -290,11 +285,11 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                   onChange={(e) => setCvFile(e.target.files?.[0] || null)}
                   className="hidden"
                 />
-                <div className="w-10 h-10 bg-white dark:bg-zinc-800 rounded-xl shadow-sm dark:shadow-zinc-900/50 flex items-center justify-center">
+                <div className="w-10 h-10 bg-zinc-50 dark:bg-zinc-800 rounded-lg flex items-center justify-center">
                   <Upload className="w-5 h-5 text-zinc-400 dark:text-zinc-500" />
                 </div>
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                  {cvFile ? cvFile.name : '上传 PDF 或 Word 简历'}
+                <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                  {cvFile ? cvFile.name : '点击选择文件'}
                 </span>
               </div>
             </div>
@@ -305,10 +300,10 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
 
             {/* Upload Type Toggle — pill style */}
             {!job && (
-              <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-2xl w-fit">
+              <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl w-fit">
                 <button
                   onClick={() => switchMode("audio")}
-                  className={`px-6 py-2 rounded-xl text-xs font-bold transition-all ${
+                  className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                     mode === "audio"
                       ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-zinc-100"
                       : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
@@ -318,7 +313,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                 </button>
                 <button
                   onClick={() => switchMode("transcript")}
-                  className={`px-6 py-2 rounded-xl text-xs font-bold transition-all ${
+                  className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                     mode === "transcript"
                       ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-zinc-100"
                       : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
@@ -332,14 +327,14 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
             {/* Sub-grid: Upload zone (left) + Progress tracker (right) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-              {/* Drop Zone */}
+              {/* Drop Zone — visual center */}
               <div
                 onDragOver={onDragOver}
                 onDragLeave={onDragLeave}
                 onDrop={onDrop}
                 onClick={() => !uploading && fileInputRef.current?.click()}
                 className={`
-                  group relative min-h-[280px] border-2 border-dashed rounded-3xl p-8
+                  group relative min-h-[280px] border-2 border-dashed rounded-xl p-8
                   transition-all duration-200 flex flex-col items-center justify-center text-center
                   ${uploading ? "pointer-events-none opacity-50" : "cursor-pointer"}
                   ${
@@ -347,7 +342,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                       ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950"
                       : file
                       ? "border-indigo-300 dark:border-indigo-700 bg-white dark:bg-zinc-900"
-                      : "border-zinc-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/50 hover:border-zinc-400 dark:hover:border-zinc-500"
+                      : "border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md"
                   }
                 `}
               >
@@ -361,14 +356,14 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
 
                 {file ? (
                   <div className="space-y-3">
-                    <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-950 rounded-2xl shadow-sm flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
-                      <FileIcon className="w-8 h-8 text-indigo-500 dark:text-indigo-400" />
+                    <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-950 rounded-xl flex items-center justify-center mx-auto group-hover:scale-105 transition-transform">
+                      <FileIcon className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                      <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
                         {file.name}
                       </p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
                         {formatSize(file.size)}
                       </p>
                     </div>
@@ -377,18 +372,21 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <div className="w-16 h-16 bg-white dark:bg-zinc-800 rounded-2xl shadow-sm dark:shadow-zinc-900/50 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
-                      <Upload className="w-8 h-8 text-zinc-400 dark:text-zinc-500" />
+                  <div className="space-y-4">
+                    <div className="w-14 h-14 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center mx-auto group-hover:scale-105 transition-transform">
+                      <Upload className="w-7 h-7 text-zinc-400 dark:text-zinc-500" />
                     </div>
                     <div className="space-y-1">
-                      <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
-                        {mode === "audio" ? "点击上传录音" : "点击上传逐字稿"}
+                      <p className="text-base font-semibold text-zinc-700 dark:text-zinc-300">
+                        {mode === "audio" ? "上传面试录音" : "上传逐字稿文件"}
                       </p>
-                      <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                      <p className="text-sm text-zinc-400 dark:text-zinc-500">
+                        拖拽文件到此处或点击选择
+                      </p>
+                      <p className="text-xs text-zinc-400 dark:text-zinc-500 pt-2">
                         {mode === "audio"
-                          ? "支持 M4A, MP3, WAV, FLAC, MP4, AAC, OGG, WMA"
-                          : "支持 TXT, JSON, SRT, VTT, DOCX"}
+                          ? "M4A, MP3, WAV, FLAC, AAC, OGG, WMA"
+                          : "TXT, JSON, SRT, VTT, DOCX"}
                       </p>
                     </div>
                   </div>
@@ -396,8 +394,8 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
               </div>
 
               {/* Progress Tracker Panel */}
-              <div className="bg-white/50 dark:bg-zinc-900/50 rounded-3xl p-8 flex flex-col justify-center space-y-6 border border-zinc-200 dark:border-zinc-700">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+              <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 flex flex-col justify-center space-y-5 border border-zinc-200 dark:border-zinc-700">
+                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                   处理进度
                 </h3>
                 <div className="space-y-5">
@@ -457,7 +455,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
 
                 {/* Done State */}
                 {job && job.status === "done" && (
-                  <div className="p-4 bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 rounded-2xl text-center">
+                  <div className="p-4 bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 rounded-xl text-center">
                     <CheckCircle className="w-6 h-6 text-emerald-500 dark:text-emerald-400 mx-auto mb-2" />
                     <p className="text-emerald-800 dark:text-emerald-300 font-medium text-sm">
                       分析完成！正在跳转到报告...
@@ -467,7 +465,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
 
                 {/* Error State */}
                 {job && job.status === "error" && (
-                  <div className="p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-2xl">
+                  <div className="p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-xl">
                     <div className="flex items-start gap-3">
                       <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
                       <div>
@@ -500,9 +498,9 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                 <button
                   onClick={startUpload}
                   disabled={uploading}
-                  className="px-8 py-3 bg-indigo-600 text-white font-medium rounded-2xl
+                  className="px-8 py-3 bg-indigo-600 text-white text-sm font-semibold rounded-lg
                     hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed
-                    transition-colors shadow-sm dark:shadow-indigo-900/30"
+                    transition-colors shadow-sm"
                 >
                   {uploading ? "上传中..." : "开始分析"}
                 </button>
