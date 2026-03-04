@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, FileAudio, FileText, CheckCircle, AlertCircle, Loader } from "lucide-react";
+import { Upload, FileAudio, FileText, CheckCircle, AlertCircle, Loader, ChevronDown, ChevronRight } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
 
 interface UploadPageProps {
@@ -58,7 +58,11 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
   const [uploading, setUploading] = useState(false);
   const [job, setJob] = useState<JobState | null>(null);
   const [resumedFileName, setResumedFileName] = useState<string | null>(null);
+  const [jdText, setJdText] = useState("");
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [showContext, setShowContext] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cvInputRef = useRef<HTMLInputElement>(null);
 
   const steps = mode === "audio" ? AUDIO_STEPS : TRANSCRIPT_STEPS;
   const totalSteps = steps.length;
@@ -155,6 +159,9 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
     setMode(newMode);
     setFile(null);
     setJob(null);
+    setJdText("");
+    setCvFile(null);
+    setShowContext(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -170,6 +177,12 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
         formData.append("audio", file);
       } else {
         formData.append("transcript", file);
+      }
+      if (jdText.trim()) {
+        formData.append("jdText", jdText.trim());
+      }
+      if (cvFile) {
+        formData.append("cv", cvFile);
       }
 
       const endpoint = mode === "audio"
@@ -324,6 +337,48 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
           </div>
         )}
 
+        {/* Optional Context: JD + CV */}
+        {file && !job && (
+          <div className="mt-4">
+            <button
+              onClick={() => setShowContext(!showContext)}
+              className="flex items-center gap-2 text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+            >
+              {showContext ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+              附加信息（可选）
+            </button>
+            {showContext && (
+              <div className="mt-3 space-y-3">
+                <textarea
+                  value={jdText}
+                  onChange={(e) => setJdText(e.target.value)}
+                  rows={4}
+                  placeholder="粘贴岗位描述 JD（可选，提供后将生成岗位摘要和契合度分析）"
+                  className="w-full px-4 py-3 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-vertical"
+                />
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => cvInputRef.current?.click()}
+                    className="px-3 py-1.5 text-xs font-medium rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:border-indigo-300 hover:text-indigo-600 transition-colors"
+                  >
+                    选择简历文件
+                  </button>
+                  <input
+                    ref={cvInputRef}
+                    type="file"
+                    accept=".pdf,.docx"
+                    onChange={(e) => setCvFile(e.target.files?.[0] || null)}
+                    className="hidden"
+                  />
+                  {cvFile && (
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400">{cvFile.name}</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Upload Button */}
         {file && !job && (
           <div className="mt-6 flex justify-center">
@@ -420,6 +475,9 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                   onClick={() => {
                     setJob(null);
                     setFile(null);
+                    setJdText("");
+                    setCvFile(null);
+                    setShowContext(false);
                   }}
                   className="mt-4 px-4 py-2 text-sm bg-white dark:bg-zinc-900 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
                 >

@@ -49,6 +49,14 @@ db.exec(`
     result TEXT,
     created_at INTEGER NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS report_context (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_name TEXT NOT NULL UNIQUE,
+    jd_text TEXT,
+    cv_text TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 // Pre-seed invite codes (ignore if already exist)
@@ -231,6 +239,20 @@ export function getActiveJobs(userId?: number): PersistedJob[] {
 export function deleteOldJobs(maxAgeMs: number): void {
   const cutoff = Date.now() - maxAgeMs;
   db.prepare("DELETE FROM pipeline_jobs WHERE created_at < ?").run(cutoff);
+}
+
+// ── Report context helpers ──
+
+export function saveReportContext(reportName: string, jdText: string | null, cvText: string | null): void {
+  db.prepare(
+    "INSERT OR REPLACE INTO report_context (report_name, jd_text, cv_text) VALUES (?, ?, ?)"
+  ).run(reportName, jdText, cvText);
+}
+
+export function getReportContext(reportName: string): { jd_text: string | null; cv_text: string | null } | undefined {
+  return db
+    .prepare("SELECT jd_text, cv_text FROM report_context WHERE report_name = ?")
+    .get(reportName) as { jd_text: string | null; cv_text: string | null } | undefined;
 }
 
 export default db;
