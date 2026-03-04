@@ -445,9 +445,9 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                   </button>
                 ))}
               </div>
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 xl:items-start">
                 {/* Left: Question table */}
-                <Card>
+                <Card className="xl:max-h-[800px] overflow-y-auto">
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                       <thead className="text-xs text-zinc-500 uppercase bg-zinc-50 border-b border-zinc-200">
@@ -488,7 +488,7 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                 </Card>
 
                 {/* Right: Transcript chat */}
-                <Card>
+                <Card className="xl:max-h-[800px] flex flex-col xl:sticky xl:top-4">
                   <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <MessageCircle size={16} className="text-zinc-500" />
@@ -509,24 +509,25 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
 
             {/* 4. Dialogue Chains */}
             <Section id="chains" title="四、对话链分析" icon={<TrendingUp size={20} />}>
-              {dialogueChains.length <= 3 ? (
-                // Render all chains normally
-                dialogueChains.map((chain, idx) => (
-                  <DialogueChainView key={idx} title={chain.title} steps={chain.steps} />
-                ))
-              ) : (
-                // First two chains full width, rest in grid
-                <>
-                  {dialogueChains.slice(0, 2).map((chain, idx) => (
-                    <DialogueChainView key={idx} title={chain.title} steps={chain.steps} />
-                  ))}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {dialogueChains.slice(2).map((chain, idx) => (
-                      <DialogueChainView key={idx + 2} title={chain.title} steps={chain.steps} />
+              {(() => {
+                const sorted = [...dialogueChains].sort((a, b) => b.steps.length - a.steps.length);
+                const important = sorted.filter(c => c.steps.length >= 4);
+                const minor = sorted.filter(c => c.steps.length < 4);
+                return (
+                  <>
+                    {important.map((chain, idx) => (
+                      <DialogueChainView key={`imp-${idx}`} title={chain.title} steps={chain.steps} />
                     ))}
-                  </div>
-                </>
-              )}
+                    {minor.length > 0 && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {minor.map((chain, idx) => (
+                          <DialogueChainView key={`min-${idx}`} title={chain.title} steps={chain.steps} />
+                        ))}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </Section>
 
             {/* 5. Focus Map */}

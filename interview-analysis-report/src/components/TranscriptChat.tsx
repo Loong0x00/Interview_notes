@@ -25,7 +25,7 @@ export default function TranscriptChat({ segments, interviewerSpeaker, activeSeg
   }
 
   return (
-    <div ref={containerRef} className="overflow-y-auto px-4 py-4 space-y-3 scroll-smooth bg-zinc-50/30" style={{ height: '600px' }}>
+    <div ref={containerRef} className="overflow-y-auto px-4 py-4 space-y-3 scroll-smooth bg-zinc-50/30 flex-1 min-h-0">
       {segments.map((seg, idx) => {
         const isInterviewer = seg.speaker === interviewerSpeaker;
         const isActive = idx === activeSegmentIndex;
