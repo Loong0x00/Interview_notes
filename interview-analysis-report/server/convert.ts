@@ -1,20 +1,4 @@
-import OpenAI from "openai";
-import dotenv from "dotenv";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-dotenv.config({ path: path.resolve(__dirname, "../.env") });
-
-const client = new OpenAI({
-  apiKey: process.env.DASHSCOPE_API_KEY,
-  baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-});
-
-const MODEL = "qwen-plus";
+import { getDashscopeClient, ANALYSIS_MODEL, stripCodeFences } from "./lib/ai-client.js";
 
 const JSON_SCHEMA = `{
   "meta": {
@@ -114,10 +98,11 @@ ${JSON_SCHEMA}
 `;
 
 export async function convertMdToJson(mdContent: string): Promise<object> {
-  console.log(`  调用 ${MODEL} 转换为结构化JSON...`);
+  const client = getDashscopeClient();
+  console.log(`  调用 ${ANALYSIS_MODEL} 转换为结构化JSON...`);
 
   const response = await client.chat.completions.create({
-    model: MODEL,
+    model: ANALYSIS_MODEL,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       {
@@ -136,49 +121,8 @@ export async function convertMdToJson(mdContent: string): Promise<object> {
     );
   }
 
-  let raw = response.choices[0].message.content?.trim() || "";
-  // Strip markdown code fences if present
-  if (raw.startsWith("```")) {
-    raw = raw.split("\n", 1)[1] || raw;
-    if (raw.endsWith("```")) {
-      raw = raw.slice(0, -3).trim();
-    }
-  }
+  const raw = stripCodeFences(response.choices[0].message.content?.trim() || "");
 
   return JSON.parse(raw);
 }
 
-// CLI mode: run directly with `tsx server/convert.ts [file.md]`
-const isMain = process.argv[1] && path.resolve(process.argv[1]).replace(/\.ts$/, "") === __filename.replace(/\.ts$/, "");
-if (isMain) {
-  const DATA_DIR = path.resolve(__dirname, "../../");
-
-  (async () => {
-    let files: string[];
-    if (process.argv.length >= 3) {
-      files = [process.argv[2]];
-    } else {
-      files = fs
-        .readdirSync(DATA_DIR)
-        .filter((f) => f.endsWith("_analysis.md"))
-        .map((f) => path.join(DATA_DIR, f));
-      if (files.length === 0) {
-        console.log("用法: tsx server/convert.ts <analysis.md>");
-        process.exit(1);
-      }
-    }
-
-    for (const mdPath of files) {
-      console.log(`\n${"=".repeat(60)}`);
-      console.log(`转换: ${path.basename(mdPath)}`);
-      console.log(`${"=".repeat(60)}`);
-
-      const mdContent = fs.readFileSync(mdPath, "utf-8");
-      const data = await convertMdToJson(mdContent);
-
-      const outputPath = mdPath.replace("_analysis.md", "_analysis_data.json");
-      fs.writeFileSync(outputPath, JSON.stringify(data, null, 2), "utf-8");
-      console.log(`  已保存: ${outputPath}`);
-    }
-  })();
-}

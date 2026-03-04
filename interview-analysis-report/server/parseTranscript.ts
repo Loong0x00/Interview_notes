@@ -1,15 +1,7 @@
-import OpenAI from "openai";
 import fs from "fs";
-import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
 import mammoth from "mammoth";
 import type { TranscriptSegment } from "./transcribe.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-dotenv.config({ path: path.resolve(__dirname, "../.env") });
+import { getDashscopeClient, FAST_MODEL, stripCodeFences } from "./lib/ai-client.js";
 
 /**
  * Parse a transcript file into normalized TranscriptSegment[].
@@ -307,14 +299,7 @@ function parseTxtInline(content: string): TranscriptSegment[] {
     });
   }
 
-  // Patch end_ms
-  for (let i = 0; i < segments.length; i++) {
-    if (i < segments.length - 1) {
-      segments[i].end_ms = segments[i + 1].start_ms;
-    } else {
-      segments[i].end_ms = segments[i].start_ms + 30000;
-    }
-  }
+  patchEndTimes(segments);
 
   return segments;
 }
@@ -372,14 +357,7 @@ function parseTxtMultiline(content: string): TranscriptSegment[] {
   }
   flush();
 
-  // Patch end_ms: set each segment's end to next segment's start, last to start + 30s
-  for (let i = 0; i < segments.length; i++) {
-    if (i < segments.length - 1) {
-      segments[i].end_ms = segments[i + 1].start_ms;
-    } else {
-      segments[i].end_ms = segments[i].start_ms + 30000;
-    }
-  }
+  patchEndTimes(segments);
 
   return segments;
 }
@@ -387,22 +365,18 @@ function parseTxtMultiline(content: string): TranscriptSegment[] {
 // ─── AI Fallback ───────────────────────────────────────────────
 
 async function aiParse(content: string): Promise<TranscriptSegment[]> {
-  const apiKey = process.env.DASHSCOPE_API_KEY;
-  if (!apiKey) {
+  if (!process.env.DASHSCOPE_API_KEY) {
     console.log("[parseTranscript] No DASHSCOPE_API_KEY, skipping AI fallback");
     return [];
   }
 
-  const client = new OpenAI({
-    apiKey,
-    baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-  });
+  const client = getDashscopeClient();
 
   // Truncate to avoid token limits
   const truncated = content.length > 15000 ? content.slice(0, 15000) : content;
 
   const response = await client.chat.completions.create({
-    model: "qwen-turbo",
+    model: FAST_MODEL,
     messages: [
       {
         role: "system",
@@ -429,15 +403,7 @@ async function aiParse(content: string): Promise<TranscriptSegment[]> {
     max_tokens: 8000,
   });
 
-  let raw = response.choices[0].message.content?.trim() || "";
-  // Strip code fences
-  if (raw.startsWith("```")) {
-    const firstNewline = raw.indexOf("\n");
-    raw = raw.slice(firstNewline + 1);
-    if (raw.endsWith("```")) {
-      raw = raw.slice(0, -3).trim();
-    }
-  }
+  const raw = stripCodeFences(response.choices[0].message.content?.trim() || "");
 
   try {
     const parsed = JSON.parse(raw);
@@ -459,6 +425,17 @@ async function aiParse(content: string): Promise<TranscriptSegment[]> {
 }
 
 // ─── Helpers ───────────────────────────────────────────────────
+
+/** Patch end_ms: set each segment's end to next segment's start, last to start + 30s */
+function patchEndTimes(segments: TranscriptSegment[]): void {
+  for (let i = 0; i < segments.length; i++) {
+    if (i < segments.length - 1) {
+      segments[i].end_ms = segments[i + 1].start_ms;
+    } else {
+      segments[i].end_ms = segments[i].start_ms + 30000;
+    }
+  }
+}
 
 function parseTimeToMs(h: string, m: string, s: string, ms: string): number {
   return (

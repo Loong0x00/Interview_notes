@@ -1,10 +1,11 @@
+import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { transcribe, type TranscriptSegment } from "./transcribe.js";
 import { formatTranscript, analyze } from "./analyze.js";
 import { convertMdToJson } from "./convert.js";
-import { registerReport } from "./db.js";
+import { registerReport, saveJob, getPersistedJob, getActiveJobs, deleteOldJobs } from "./db.js";
 import { parseTranscriptFile } from "./parseTranscript.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -61,6 +62,7 @@ export function addJobListener(jobId: string, listener: ProgressListener): () =>
 
 function updateJob(job: PipelineJob) {
   jobs.set(job.id, { ...job });
+  saveJob(job);
   const jobListeners = listeners.get(job.id);
   if (jobListeners) {
     for (const listener of jobListeners) {
@@ -68,6 +70,79 @@ function updateJob(job: PipelineJob) {
     }
   }
 }
+
+/** Generate a short UUID suffix (8 hex chars) for unique file naming */
+function shortUuid(): string {
+  return crypto.randomBytes(4).toString("hex");
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Shared analysis + convert + register + cleanup
+// ═══════════════════════════════════════════════════════════════
+
+async function runAnalysisAndConvert(
+  job: PipelineJob,
+  baseName: string,
+  segments: TranscriptSegment[],
+  tempFilePath: string,
+  stepPrefix: { analysis: string; convert: string }
+): Promise<void> {
+  const transcriptPath = path.join(DATA_DIR, `${baseName}_transcript.json`);
+  const analysisPath = path.join(DATA_DIR, `${baseName}_analysis.md`);
+  const analysisJsonPath = path.join(DATA_DIR, `${baseName}_analysis_data.json`);
+
+  // Save normalized transcript
+  fs.writeFileSync(transcriptPath, JSON.stringify(segments, null, 2), "utf-8");
+  console.log(`[Pipeline] Saved transcript (${segments.length} segments): ${transcriptPath}`);
+
+  // AI Analysis
+  job.status = "analyzing";
+  job.progress = `${stepPrefix.analysis} AI 分析中...`;
+  updateJob(job);
+
+  const transcriptText = formatTranscript(segments);
+  const report = await analyze(transcriptText, (detail) => {
+    job.progress = `${stepPrefix.analysis} AI 分析 - ${detail}`;
+    updateJob(job);
+  });
+
+  fs.writeFileSync(analysisPath, report, "utf-8");
+  console.log(`[Pipeline] Saved analysis: ${analysisPath}`);
+
+  // Convert to structured JSON
+  job.status = "converting";
+  job.progress = `${stepPrefix.convert} 结构化转换中...`;
+  updateJob(job);
+
+  const jsonData = await convertMdToJson(report);
+  fs.writeFileSync(analysisJsonPath, JSON.stringify(jsonData, null, 2), "utf-8");
+  console.log(`[Pipeline] Saved JSON: ${analysisJsonPath}`);
+
+  // Register report ownership
+  if (job.userId) {
+    registerReport(job.userId, baseName);
+  }
+
+  // Done
+  job.status = "done";
+  job.progress = "处理完成";
+  job.result = baseName;
+  updateJob(job);
+
+  // Cleanup temp upload file
+  try {
+    if (fs.existsSync(tempFilePath)) {
+      fs.unlinkSync(tempFilePath);
+      console.log(`[Pipeline] Cleaned up temp file: ${tempFilePath}`);
+    }
+  } catch {
+    // Ignore cleanup errors
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Audio pipeline (transcribe + analyze + convert)
+// ═══════════════════════════════════════════════════════════════
 
 export function startPipeline(audioPath: string, originalFileName: string, userId?: number): string {
   const id = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -80,6 +155,7 @@ export function startPipeline(audioPath: string, originalFileName: string, userI
     userId,
   };
   jobs.set(id, job);
+  saveJob(job);
 
   // Run async pipeline - don't await
   runPipeline(job, audioPath, originalFileName).catch((err) => {
@@ -98,10 +174,8 @@ async function runPipeline(
   audioPath: string,
   originalFileName: string
 ): Promise<void> {
-  const baseName = path.basename(originalFileName, path.extname(originalFileName));
-  const transcriptPath = path.join(DATA_DIR, `${baseName}_transcript.json`);
-  const analysisPath = path.join(DATA_DIR, `${baseName}_analysis.md`);
-  const analysisJsonPath = path.join(DATA_DIR, `${baseName}_analysis_data.json`);
+  const fileBase = path.basename(originalFileName, path.extname(originalFileName));
+  const baseName = `${fileBase}_${shortUuid()}`;
 
   try {
     // Step 1: Transcribe
@@ -114,53 +188,10 @@ async function runPipeline(
       updateJob(job);
     });
 
-    // Save transcript
-    fs.writeFileSync(transcriptPath, JSON.stringify(segments, null, 2), "utf-8");
-    console.log(`[Pipeline] Saved transcript: ${transcriptPath}`);
-
-    // Step 2: AI Analysis
-    job.status = "analyzing";
-    job.progress = "[2/3] AI 分析中...";
-    updateJob(job);
-
-    const transcriptText = formatTranscript(segments);
-    const report = await analyze(transcriptText, (detail) => {
-      job.progress = `[2/3] AI 分析 - ${detail}`;
-      updateJob(job);
+    await runAnalysisAndConvert(job, baseName, segments, audioPath, {
+      analysis: "[2/3]",
+      convert: "[3/3]",
     });
-
-    fs.writeFileSync(analysisPath, report, "utf-8");
-    console.log(`[Pipeline] Saved analysis: ${analysisPath}`);
-
-    // Step 3: Convert to structured JSON
-    job.status = "converting";
-    job.progress = "[3/3] 结构化转换中...";
-    updateJob(job);
-
-    const jsonData = await convertMdToJson(report);
-    fs.writeFileSync(analysisJsonPath, JSON.stringify(jsonData, null, 2), "utf-8");
-    console.log(`[Pipeline] Saved JSON: ${analysisJsonPath}`);
-
-    // Register report ownership
-    if (job.userId) {
-      registerReport(job.userId, baseName);
-    }
-
-    // Done
-    job.status = "done";
-    job.progress = "处理完成";
-    job.result = baseName;
-    updateJob(job);
-
-    // Cleanup temp upload file
-    try {
-      if (fs.existsSync(audioPath)) {
-        fs.unlinkSync(audioPath);
-        console.log(`[Pipeline] Cleaned up temp file: ${audioPath}`);
-      }
-    } catch {
-      // Ignore cleanup errors
-    }
   } catch (err: any) {
     job.status = "error";
     job.error = err.message || String(err);
@@ -185,6 +216,7 @@ export function startTranscriptPipeline(filePath: string, originalFileName: stri
     userId,
   };
   jobs.set(id, job);
+  saveJob(job);
 
   // Run async pipeline - don't await
   runTranscriptPipeline(job, filePath, originalFileName).catch((err) => {
@@ -203,11 +235,9 @@ async function runTranscriptPipeline(
   filePath: string,
   originalFileName: string
 ): Promise<void> {
-  const baseName = path.basename(originalFileName, path.extname(originalFileName));
+  const fileBase = path.basename(originalFileName, path.extname(originalFileName));
   const ext = path.extname(originalFileName);
-  const transcriptPath = path.join(DATA_DIR, `${baseName}_transcript.json`);
-  const analysisPath = path.join(DATA_DIR, `${baseName}_analysis.md`);
-  const analysisJsonPath = path.join(DATA_DIR, `${baseName}_analysis_data.json`);
+  const baseName = `${fileBase}_${shortUuid()}`;
 
   try {
     // Step 0: Parse transcript file
@@ -221,52 +251,10 @@ async function runTranscriptPipeline(
       throw new Error("无法解析转录文件：未提取到有效对话片段");
     }
 
-    // Save normalized transcript
-    fs.writeFileSync(transcriptPath, JSON.stringify(segments, null, 2), "utf-8");
-    console.log(`[Pipeline] Saved transcript (${segments.length} segments): ${transcriptPath}`);
-
-    // Step 1: AI Analysis
-    job.progress = "[1/2] AI 分析中...";
-    updateJob(job);
-
-    const transcriptText = formatTranscript(segments);
-    const report = await analyze(transcriptText, (detail) => {
-      job.progress = `[1/2] AI 分析 - ${detail}`;
-      updateJob(job);
+    await runAnalysisAndConvert(job, baseName, segments, filePath, {
+      analysis: "[1/2]",
+      convert: "[2/2]",
     });
-
-    fs.writeFileSync(analysisPath, report, "utf-8");
-    console.log(`[Pipeline] Saved analysis: ${analysisPath}`);
-
-    // Step 2: Convert to structured JSON
-    job.status = "converting";
-    job.progress = "[2/2] 结构化转换中...";
-    updateJob(job);
-
-    const jsonData = await convertMdToJson(report);
-    fs.writeFileSync(analysisJsonPath, JSON.stringify(jsonData, null, 2), "utf-8");
-    console.log(`[Pipeline] Saved JSON: ${analysisJsonPath}`);
-
-    // Register report ownership
-    if (job.userId) {
-      registerReport(job.userId, baseName);
-    }
-
-    // Done
-    job.status = "done";
-    job.progress = "处理完成";
-    job.result = baseName;
-    updateJob(job);
-
-    // Cleanup temp upload file
-    try {
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-        console.log(`[Pipeline] Cleaned up temp file: ${filePath}`);
-      }
-    } catch {
-      // Ignore cleanup errors
-    }
   } catch (err: any) {
     job.status = "error";
     job.error = err.message || String(err);
@@ -274,4 +262,42 @@ async function runTranscriptPipeline(
     updateJob(job);
     throw err;
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Startup: restore persisted jobs + cleanup
+// ═══════════════════════════════════════════════════════════════
+
+const IN_PROGRESS_STATUSES: Set<string> = new Set(["uploading", "transcribing", "analyzing", "converting"]);
+
+export function restoreJobs(): void {
+  // Clean up old jobs (>24 hours)
+  deleteOldJobs(24 * 60 * 60 * 1000);
+
+  // Load persisted jobs into memory
+  const persisted = getActiveJobs();
+  for (const row of persisted) {
+    const job: PipelineJob = {
+      id: row.id,
+      fileName: row.file_name,
+      status: row.status as JobStatus,
+      progress: row.progress,
+      createdAt: row.created_at,
+      userId: row.user_id ?? undefined,
+      result: row.result ?? undefined,
+      error: row.error ?? undefined,
+    };
+
+    // Mark interrupted jobs as error
+    if (IN_PROGRESS_STATUSES.has(job.status)) {
+      job.status = "error";
+      job.error = "服务器重启，任务中断";
+      job.progress = "处理失败";
+      saveJob(job);
+    }
+
+    jobs.set(job.id, job);
+  }
+
+  console.log(`[Pipeline] Restored ${persisted.length} jobs from database`);
 }
