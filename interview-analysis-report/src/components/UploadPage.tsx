@@ -221,31 +221,31 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
   const FileIcon = mode === "audio" ? FileAudio : FileText;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100">
+    <div className="min-h-screen bg-[var(--bg-base)] font-sans text-[var(--text-primary)]">
       {/* Header — consistent with App.tsx list page */}
-      <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
+      <header className="bg-[var(--bg-base)]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={onBack}
-              className="inline-flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
             >
               <ArrowLeft size={16} />
               返回
             </button>
-            <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-700" />
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">R</div>
-            <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">上传面试</h1>
+            <div className="w-px h-5 bg-[var(--border-color)]" />
+            <div className="w-8 h-8 bg-[var(--brand)] rounded-2xl flex items-center justify-center text-white font-bold">R</div>
+            <h1 className="text-lg font-bold text-[var(--text-primary)]">上传面试</h1>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-surface)] transition-colors"
               aria-label="Toggle theme"
             >
               {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
             </button>
-            <button onClick={logout} className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors">退出登录</button>
+            <button onClick={logout} className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">退出登录</button>
           </div>
         </div>
       </header>
@@ -265,7 +265,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                 value={jdText}
                 onChange={(e) => setJdText(e.target.value)}
                 placeholder="粘贴岗位描述..."
-                className="w-full h-40 p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:focus:ring-indigo-400/30 transition-all resize-none"
+                className="w-full h-40 p-4 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl text-sm text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/30 focus:border-[var(--brand)] transition-all resize-none shadow-[0_10px_40px_rgba(0,0,0,0.04)] dark:shadow-none"
               />
             </div>
 
@@ -277,7 +277,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
               </div>
               <div
                 onClick={() => cvInputRef.current?.click()}
-                className="relative group border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl p-6 transition-all hover:border-indigo-300 dark:hover:border-indigo-600 cursor-pointer bg-white dark:bg-zinc-900 flex flex-col items-center justify-center space-y-2"
+                className="relative group border-2 border-dashed border-[var(--border-color)] rounded-2xl p-6 transition-all hover:border-[var(--brand)] cursor-pointer bg-[var(--bg-surface)] flex flex-col items-center justify-center space-y-2 shadow-[0_10px_40px_rgba(0,0,0,0.04)] dark:shadow-none"
               >
                 <input
                   ref={cvInputRef}
@@ -335,15 +335,16 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                 onDrop={onDrop}
                 onClick={() => !uploading && fileInputRef.current?.click()}
                 className={`
-                  group relative min-h-[280px] border-2 border-dashed rounded-xl p-8
+                  group relative min-h-[280px] border-2 border-dashed rounded-2xl p-8
                   transition-all duration-200 flex flex-col items-center justify-center text-center
+                  shadow-[0_10px_40px_rgba(0,0,0,0.04)] dark:shadow-none
                   ${uploading ? "pointer-events-none opacity-50" : "cursor-pointer"}
                   ${
                     dragging
-                      ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950"
+                      ? "border-[var(--brand)] bg-[var(--brand-light)]"
                       : file
-                      ? "border-indigo-300 dark:border-indigo-700 bg-white dark:bg-zinc-900"
-                      : "border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md"
+                      ? "border-[var(--brand)] bg-[var(--bg-surface)]"
+                      : "border-[var(--border-color)] bg-[var(--bg-surface)] hover:border-[var(--brand)] hover:shadow-md"
                   }
                 `}
               >
@@ -357,8 +358,8 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
 
                 {file ? (
                   <div className="space-y-3">
-                    <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-950 rounded-xl flex items-center justify-center mx-auto group-hover:scale-105 transition-transform">
-                      <FileIcon className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
+                    <div className="w-14 h-14 bg-[var(--brand-light)] rounded-xl flex items-center justify-center mx-auto group-hover:scale-105 transition-transform">
+                      <FileIcon className="w-7 h-7 text-[var(--brand)]" />
                     </div>
                     <div>
                       <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
@@ -395,7 +396,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
               </div>
 
               {/* Progress Tracker Panel */}
-              <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 flex flex-col justify-center space-y-5 border border-zinc-200 dark:border-zinc-700">
+              <div className="bg-[var(--bg-surface)] rounded-2xl p-6 flex flex-col justify-center space-y-5 border border-[var(--border-color)] shadow-[0_10px_40px_rgba(0,0,0,0.04)] dark:shadow-none">
                 <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                   处理进度
                 </h3>
@@ -411,7 +412,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                           <span
                             className={`text-[11px] font-bold uppercase tracking-wider ${
                               isActive
-                                ? "text-indigo-600 dark:text-indigo-400"
+                                ? "text-[var(--brand)]"
                                 : isDone
                                 ? "text-emerald-600 dark:text-emerald-400"
                                 : "text-zinc-400 dark:text-zinc-500"
@@ -421,7 +422,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                           </span>
                           <div className="flex items-center gap-1.5">
                             {isDone && <CheckCircle className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />}
-                            {isActive && <Loader className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400 animate-spin" />}
+                            {isActive && <Loader className="w-3.5 h-3.5 text-[var(--brand)] animate-spin" />}
                           </div>
                         </div>
                         {/* Horizontal progress bar */}
@@ -431,7 +432,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                               isDone
                                 ? "bg-emerald-500 dark:bg-emerald-400"
                                 : isActive
-                                ? "bg-indigo-500 dark:bg-indigo-400"
+                                ? "bg-[var(--brand)]"
                                 : "bg-zinc-300 dark:bg-zinc-600"
                             }`}
                             style={{
@@ -452,7 +453,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                               {job.progress}
                             </p>
                             {job.progressPercent !== undefined && (
-                              <span className="text-[10px] font-medium text-indigo-500 dark:text-indigo-400">
+                              <span className="text-[10px] font-medium text-[var(--brand)]">
                                 {job.progressPercent}%
                               </span>
                             )}
@@ -515,9 +516,9 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                 <button
                   onClick={startUpload}
                   disabled={uploading}
-                  className="px-8 py-3 bg-indigo-600 text-white text-sm font-semibold rounded-lg
-                    hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed
-                    transition-colors shadow-sm"
+                  className="px-8 py-3 bg-[var(--brand)] text-white text-sm font-semibold rounded-full
+                    hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed
+                    transition-all shadow-sm"
                 >
                   {uploading ? "上传中..." : "开始分析"}
                 </button>

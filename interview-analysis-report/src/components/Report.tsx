@@ -42,7 +42,7 @@ const Card = ({ children, className = "" }: { children: React.ReactNode; classNa
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true, margin: "-50px" }}
     transition={{ duration: 0.5 }}
-    className={`bg-white dark:bg-zinc-900 rounded-xl shadow-sm dark:shadow-zinc-900/50 border border-zinc-200 dark:border-zinc-700 overflow-hidden ${className}`}
+    className={`bg-[var(--bg-surface)] rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.04)] dark:shadow-none border border-[var(--border-color)] overflow-hidden ${className}`}
   >
     {children}
   </motion.div>
@@ -57,7 +57,7 @@ const Badge = ({ children, color = "blue" }: { children: React.ReactNode; color?
     zinc: "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700",
   };
   return (
-    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${colors[color]}`}>
+    <span className={`px-3 py-1 rounded-full text-xs font-medium border whitespace-nowrap ${colors[color]}`}>
       {children}
     </span>
   );
@@ -94,7 +94,7 @@ const Section = ({ title, icon, children, id }: SectionProps) => (
       viewport={{ once: true }}
       className="flex items-center gap-3 mb-6"
     >
-      <div className="p-2 bg-indigo-600 rounded-lg text-white shadow-md shadow-indigo-200 dark:shadow-indigo-900">
+      <div className="p-2 bg-[var(--brand)] rounded-2xl text-white shadow-md shadow-[var(--brand)]/20">
         {icon}
       </div>
       <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">{title}</h2>
@@ -136,7 +136,7 @@ const CollapsibleAnswer: React.FC<{ content: string }> = ({ content }) => {
       {needsTruncation && (
         <button
           onClick={() => setExpanded(!expanded)}
-          className="mt-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+          className="mt-1.5 text-xs text-[var(--brand)] hover:opacity-80 font-medium transition-all"
         >
           {expanded ? '收起' : '展开查看完整回答'}
         </button>
@@ -307,24 +307,24 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
   const secondInsight = focusMap.insights.find(i => i.level.includes('高') && !i.level.includes('极高'));
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="min-h-screen bg-[var(--bg-base)] font-sans text-[var(--text-primary)] selection:bg-[var(--brand-light)] selection:text-[var(--brand)]">
 
       {/* Header */}
-      <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 sticky top-0 z-50 bg-opacity-90 dark:bg-opacity-90 backdrop-blur-md">
+      <header className="bg-[var(--bg-base)] sticky top-0 z-50 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {onBack && (
-              <button onClick={onBack} className="mr-2 flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
+              <button onClick={onBack} className="mr-2 flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] bg-[var(--bg-surface)] rounded-full hover:opacity-80 transition-all">
                 <ArrowLeft size={16} />
                 <span className="hidden sm:inline">返回主页</span>
               </button>
             )}
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">
+            <div className="w-8 h-8 bg-[var(--brand)] rounded-2xl flex items-center justify-center text-white font-bold">
               R
             </div>
-            <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 hidden sm:block">面试对话分析报告</h1>
+            <h1 className="text-lg font-bold text-[var(--text-primary)] hidden sm:block">面试对话分析报告</h1>
           </div>
-          <div className="flex items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400">
+          <div className="flex items-center gap-4 text-sm text-[var(--text-secondary)]">
             <span className="flex items-center gap-1"><User size={14} /> {meta.position}</span>
             <span className="hidden sm:flex items-center gap-1"><Clock size={14} /> {meta.date}</span>
           </div>
@@ -332,7 +332,7 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
           {/* Sidebar Navigation */}
           <aside className="hidden lg:block lg:col-span-3">
@@ -351,9 +351,9 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                   <a
                     key={item.id}
                     href={`#${item.id}`}
-                    className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-400 rounded-lg hover:bg-white dark:hover:bg-zinc-800 hover:text-indigo-600 hover:shadow-sm dark:hover:shadow-zinc-900/50 transition-all group"
+                    className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-[var(--text-secondary)] rounded-xl hover:bg-[var(--bg-surface)] hover:text-[var(--brand)] hover:shadow-sm transition-all group"
                   >
-                    <item.icon size={16} className="group-hover:text-indigo-600 transition-colors" />
+                    <item.icon size={16} className="group-hover:text-[var(--brand)] transition-colors" />
                     {chineseNumbers[idx]}、{item.label}
                   </a>
                 ));
@@ -362,7 +362,7 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
           </aside>
 
           {/* Main Content */}
-          <main className="lg:col-span-9 space-y-12">
+          <main className="lg:col-span-9 space-y-8">
 
             {/* Dynamic section numbering */}
             {(() => {
@@ -389,7 +389,7 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                     <div className="p-6 space-y-4">
                       {data.positionSummary.responsibilities.map((r, i) => (
                         <div key={i} className="flex gap-3">
-                          <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-2 shrink-0" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-[var(--brand)] mt-2 shrink-0" />
                           <span className="text-sm text-zinc-700 dark:text-zinc-300">{r}</span>
                         </div>
                       ))}
@@ -423,7 +423,7 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                           <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">关键 KPI：</span>
                           {data.positionSummary.keyKPIs.map((kpi, i) => (
                             <div key={i} className="flex gap-3 ml-2">
-                              <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-2 shrink-0" />
+                              <div className="w-1.5 h-1.5 rounded-full bg-[var(--brand)] mt-2 shrink-0" />
                               <span className="text-sm text-zinc-600 dark:text-zinc-400">{kpi}</span>
                             </div>
                           ))}
@@ -489,10 +489,10 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                   <button
                     key={tab}
                     onClick={() => setQuestionFilter(tab)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                    className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-all ${
                       questionFilter === tab
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                        : 'bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-indigo-300 hover:text-indigo-600'
+                        ? 'bg-[var(--brand)] text-white border-[var(--brand)] shadow-sm'
+                        : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border-[var(--border-color)] hover:border-[var(--brand)] hover:text-[var(--brand)]'
                     }`}
                   >
                     {tab}
@@ -521,7 +521,7 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                           <tr
                             key={i}
                             onClick={() => q.timestamp && handleQuestionClick(q.timestamp)}
-                            className={`transition-colors ${q.timestamp ? 'cursor-pointer hover:bg-indigo-50/60 dark:hover:bg-indigo-950/60' : 'hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50'}`}
+                            className={`transition-colors ${q.timestamp ? 'cursor-pointer hover:bg-[var(--brand-light)]' : 'hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50'}`}
                           >
                             <td className="px-6 py-4 text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
                               <div className="flex items-center gap-2">

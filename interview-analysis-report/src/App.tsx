@@ -102,8 +102,8 @@ function AppInner() {
   // Auth loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
-        <div className="text-zinc-400 dark:text-zinc-500 text-sm">Loading...</div>
+      <div className="min-h-screen bg-[var(--bg-base)] flex items-center justify-center">
+        <div className="text-[var(--text-secondary)] text-sm">Loading...</div>
       </div>
     );
   }
@@ -135,15 +135,15 @@ function AppInner() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
-        <div className="text-zinc-500 dark:text-zinc-400 text-lg">Loading...</div>
+      <div className="min-h-screen bg-[var(--bg-base)] flex items-center justify-center">
+        <div className="text-[var(--text-secondary)] text-lg">Loading...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--bg-base)] flex items-center justify-center">
         <div className="text-red-500 text-lg">{error}</div>
       </div>
     );
@@ -165,32 +165,32 @@ function AppInner() {
 
   // Report list view
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100">
-      <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
+    <div className="min-h-screen bg-[var(--bg-base)] font-sans text-[var(--text-primary)]">
+      <header className="bg-[var(--bg-base)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">R</div>
-            <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">面试分析报告</h1>
+            <div className="w-8 h-8 bg-[var(--brand)] rounded-2xl flex items-center justify-center text-white font-bold">R</div>
+            <h1 className="text-lg font-bold text-[var(--text-primary)]">面试分析报告</h1>
             <button
               onClick={() => setView('upload')}
-              className="ml-2 px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+              className="ml-2 px-4 py-1.5 bg-[var(--brand)] text-white text-sm font-medium rounded-full hover:opacity-90 transition-all shadow-sm"
             >
               上传新面试
             </button>
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <button onClick={logout} className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors">退出登录</button>
+            <button onClick={logout} className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">退出登录</button>
           </div>
         </div>
       </header>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {sortedReports.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-zinc-400 dark:text-zinc-500 text-lg mb-4">暂无报告</p>
+            <p className="text-[var(--text-secondary)] text-lg mb-4">暂无报告</p>
             <button
               onClick={() => setView('upload')}
-              className="px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+              className="px-6 py-3 bg-[var(--brand)] text-white font-medium rounded-full hover:opacity-90 transition-all shadow-sm"
             >
               上传第一份面试
             </button>
@@ -201,10 +201,10 @@ function AppInner() {
               <button
                 key={report.name}
                 onClick={() => loadReport(report.name)}
-                className="w-full text-left bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md transition-all"
+                className="w-full text-left bg-[var(--bg-surface)] rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.04)] dark:shadow-none border border-[var(--border-color)] p-6 hover:border-[var(--brand)] hover:shadow-md transition-all"
               >
-                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{report.position}</h2>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{report.date}</p>
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">{report.position}</h2>
+                <p className="text-sm text-[var(--text-secondary)] mt-1">{report.date}</p>
               </button>
             ))}
           </div>
