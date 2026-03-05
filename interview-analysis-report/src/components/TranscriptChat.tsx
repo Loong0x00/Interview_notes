@@ -18,14 +18,14 @@ function formatTime(ms: number): string {
 
 export default function TranscriptChat({ segments, interviewerSpeaker, activeSegmentIndex, loading, containerRef }: TranscriptChatProps) {
   if (loading) {
-    return <div className="flex items-center justify-center h-96 text-zinc-400 dark:text-zinc-500 text-sm">加载转写中...</div>;
+    return <div className="flex items-center justify-center h-96 text-text-secondary text-sm font-bold uppercase tracking-widest">加载转写中...</div>;
   }
   if (segments.length === 0) {
-    return <div className="flex items-center justify-center h-96 text-zinc-400 dark:text-zinc-500 text-sm">暂无转写数据</div>;
+    return <div className="flex items-center justify-center h-96 text-text-secondary text-sm font-bold uppercase tracking-widest">暂无转写数据</div>;
   }
 
   return (
-    <div ref={containerRef} className="overflow-y-auto px-4 py-4 space-y-3 scroll-smooth bg-zinc-50/30 dark:bg-zinc-800/30 flex-1 min-h-0">
+    <div ref={containerRef} className="overflow-y-auto px-6 py-6 space-y-6 scroll-smooth bg-bg-base flex-1 min-h-0">
       {segments.map((seg, idx) => {
         const isInterviewer = seg.speaker === interviewerSpeaker;
         const isActive = idx === activeSegmentIndex;
@@ -35,30 +35,30 @@ export default function TranscriptChat({ segments, interviewerSpeaker, activeSeg
           <div
             key={idx}
             id={`transcript-seg-${idx}`}
-            className={`flex items-end gap-2 ${isInterviewer ? 'flex-row' : 'flex-row-reverse'}`}
+            className={`flex items-start gap-3 ${isInterviewer ? 'flex-row' : 'flex-row-reverse'}`}
           >
             {/* Avatar */}
-            <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${isInterviewer ? 'bg-zinc-400' : 'bg-indigo-500'}`}>
+            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black text-white shadow-sm ${isInterviewer ? 'bg-text-secondary' : 'bg-emerald-500'}`}>
               {isInterviewer ? '官' : '候'}
             </div>
 
             {/* Bubble container */}
-            <div className={`flex flex-col gap-0.5 max-w-[78%] ${isInterviewer ? 'items-start' : 'items-end'}`}>
-              <span className="text-[10px] text-zinc-400 dark:text-zinc-500 px-1">
+            <div className={`flex flex-col gap-1.5 max-w-[85%] ${isInterviewer ? 'items-start' : 'items-end'}`}>
+              <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest px-1">
                 {label} · {formatTime(seg.start_ms)}
               </span>
               <div className={`
-                relative px-3 py-2 text-sm leading-relaxed transition-all duration-300
+                relative px-5 py-3.5 text-sm leading-relaxed transition-all duration-300 bento-shadow
                 ${isInterviewer
-                  ? 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-2xl rounded-tl-sm shadow-sm dark:shadow-zinc-900/50'
-                  : 'bg-indigo-600 text-white rounded-2xl rounded-tr-sm shadow-sm'
+                  ? 'bg-bg-surface border border-border-main text-text-primary rounded-2xl rounded-tl-sm'
+                  : 'bg-emerald-600 text-white rounded-2xl rounded-tr-sm shadow-emerald-500/20'
                 }
                 ${isActive
-                  ? 'ring-2 ring-amber-400 shadow-md'
+                  ? 'ring-4 ring-emerald-500/30 scale-[1.02] z-10 shadow-xl'
                   : ''
                 }
               `}>
-                {seg.text}
+                <p className="font-medium">{seg.text}</p>
               </div>
             </div>
           </div>

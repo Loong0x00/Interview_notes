@@ -42,7 +42,7 @@ const Card = ({ children, className = "" }: { children: React.ReactNode; classNa
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true, margin: "-50px" }}
     transition={{ duration: 0.5 }}
-    className={`bg-white dark:bg-zinc-900 rounded-xl shadow-sm dark:shadow-zinc-900/50 border border-zinc-200 dark:border-zinc-700 overflow-hidden ${className}`}
+    className={`bg-bg-surface rounded-3xl bento-shadow border border-border-main overflow-hidden ${className}`}
   >
     {children}
   </motion.div>
@@ -50,14 +50,14 @@ const Card = ({ children, className = "" }: { children: React.ReactNode; classNa
 
 const Badge = ({ children, color = "blue" }: { children: React.ReactNode; color?: "blue" | "green" | "amber" | "red" | "zinc" }) => {
   const colors = {
-    blue: "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
-    green: "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
-    amber: "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800",
-    red: "bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
-    zinc: "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700",
+    blue: "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-100 dark:border-blue-800/50",
+    green: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-800/50",
+    amber: "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-800/50",
+    red: "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-100 dark:border-red-800/50",
+    zinc: "bg-bg-base text-text-secondary border-border-main",
   };
   return (
-    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${colors[color]}`}>
+    <span className={`px-4 py-1 rounded-full text-xs font-bold border whitespace-nowrap uppercase tracking-wider ${colors[color]}`}>
       {children}
     </span>
   );
@@ -66,18 +66,18 @@ const Badge = ({ children, color = "blue" }: { children: React.ReactNode; color?
 const Table = ({ headers, rows, className = "" }: TableProps) => (
   <div className={`overflow-x-auto ${className}`}>
     <table className="w-full text-sm text-left">
-      <thead className="text-xs text-zinc-500 dark:text-zinc-400 uppercase bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-700">
+      <thead className="text-[10px] text-text-secondary uppercase tracking-widest bg-bg-base border-b border-border-main">
         <tr>
           {headers.map((h, i) => (
-            <th key={i} className="px-6 py-3 font-medium tracking-wider">{h}</th>
+            <th key={i} className="px-8 py-4 font-bold">{h}</th>
           ))}
         </tr>
       </thead>
-      <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+      <tbody className="divide-y divide-border-main">
         {rows.map((row, i) => (
-          <tr key={i} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors">
+          <tr key={i} className="hover:bg-emerald-50/20 dark:hover:bg-emerald-900/5 transition-colors">
             {row.map((cell, j) => (
-              <td key={j} className={`px-6 py-4 text-zinc-700 dark:text-zinc-300 ${j === row.length - 1 ? 'whitespace-pre-wrap' : 'whitespace-nowrap'}`}>{cell}</td>
+              <td key={j} className={`px-8 py-5 text-text-primary ${j === row.length - 1 ? 'whitespace-pre-wrap' : 'whitespace-nowrap font-medium'}`}>{cell}</td>
             ))}
           </tr>
         ))}
@@ -87,17 +87,17 @@ const Table = ({ headers, rows, className = "" }: TableProps) => (
 );
 
 const Section = ({ title, icon, children, id }: SectionProps) => (
-  <section id={id} className="scroll-mt-24 mb-12">
+  <section id={id} className="scroll-mt-24 mb-16">
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       whileInView={{ opacity: 1, x: 0 }}
       viewport={{ once: true }}
-      className="flex items-center gap-3 mb-6"
+      className="flex items-center gap-4 mb-8"
     >
-      <div className="p-2 bg-indigo-600 rounded-lg text-white shadow-md shadow-indigo-200 dark:shadow-indigo-900">
+      <div className="p-3 bg-emerald-600 rounded-2xl text-white shadow-lg shadow-emerald-500/20">
         {icon}
       </div>
-      <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">{title}</h2>
+      <h2 className="text-3xl font-bold text-text-primary tracking-tight">{title}</h2>
     </motion.div>
     {children}
   </section>
@@ -126,17 +126,17 @@ const CollapsibleAnswer: React.FC<{ content: string }> = ({ content }) => {
         initial={false}
         animate={{ height: expanded || !needsTruncation ? 'auto' : ANSWER_MAX_COLLAPSED_HEIGHT }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
-        className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300 overflow-hidden relative"
+        className="text-base leading-relaxed text-text-primary overflow-hidden relative"
       >
         {content}
         {!expanded && needsTruncation && (
-          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-zinc-900 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-bg-surface to-transparent" />
         )}
       </motion.div>
       {needsTruncation && (
         <button
           onClick={() => setExpanded(!expanded)}
-          className="mt-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+          className="mt-3 text-sm text-emerald-600 hover:text-emerald-700 font-bold transition-colors"
         >
           {expanded ? '收起' : '展开查看完整回答'}
         </button>
@@ -160,12 +160,12 @@ const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({
   rawSteps.forEach((s, i) => { if (s.type !== 'trigger') rawIndices.push(i); });
 
   return (
-  <Card className="mb-6">
-    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/50 flex justify-between items-center">
-      <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{title}</h3>
+  <Card className="mb-8">
+    <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 flex justify-between items-center">
+      <h3 className="font-bold text-text-primary">{title}</h3>
     </div>
-    <div className="p-6">
-      <div className="relative pl-8 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-200 dark:before:bg-zinc-700">
+    <div className="p-8">
+      <div className="relative pl-10 space-y-10 before:absolute before:left-[13px] before:top-2 before:bottom-2 before:w-[2px] before:bg-border-main">
         {steps.map((step, idx) => {
           const trigger = triggerAfter.get(rawIndices[idx]);
           return (
@@ -177,40 +177,40 @@ const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({
             transition={{ delay: idx * 0.1 }}
             className="relative"
           >
-            <div className={`absolute -left-[29px] w-6 h-6 rounded-full border-2 flex items-center justify-center z-10 bg-white dark:bg-zinc-900
-              ${step.type === 'question' ? 'border-blue-500 text-blue-500' :
-                step.type === 'clarification' ? 'border-purple-500 text-purple-500' :
-                'border-emerald-500 text-emerald-500'}`}>
-              <div className={`w-2 h-2 rounded-full ${
+            <div className={`absolute -left-[37px] w-7 h-7 rounded-full border-2 flex items-center justify-center z-10 bg-bg-surface
+              ${step.type === 'question' ? 'border-blue-500' :
+                step.type === 'clarification' ? 'border-amber-500' :
+                'border-emerald-500'}`}>
+              <div className={`w-2.5 h-2.5 rounded-full ${
                  step.type === 'question' ? 'bg-blue-500' :
-                 step.type === 'clarification' ? 'bg-purple-500' :
+                 step.type === 'clarification' ? 'bg-amber-500' :
                  'bg-emerald-500'
               }`} />
             </div>
 
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2 mb-1">
-                <span className={`text-xs font-bold uppercase tracking-wider
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-3 mb-1">
+                <span className={`text-[11px] font-bold uppercase tracking-widest
                   ${step.type === 'question' ? 'text-blue-600' :
-                    step.type === 'clarification' ? 'text-purple-600' :
+                    step.type === 'clarification' ? 'text-amber-600' :
                     'text-emerald-600'}`}>
                   {step.label || (step.type === 'question' ? '面试官提问' : step.type === 'clarification' ? '面试官澄清' : '候选人回答')}
                 </span>
-                {step.time && <span className="text-xs text-zinc-400 dark:text-zinc-500 font-mono">{step.time}</span>}
+                {step.time && <span className="text-[11px] text-text-secondary font-mono bg-bg-base px-2 py-0.5 rounded-full">{step.time}</span>}
               </div>
 
               {step.type === 'answer' ? (
                 <>
                   <CollapsibleAnswer content={step.content} />
                   {trigger && (
-                    <div className="mt-2 flex items-start gap-1.5 text-xs">
-                      <span className="shrink-0 px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 font-medium">触发追问</span>
-                      <span className="text-amber-700 dark:text-amber-300 leading-relaxed">"{trigger.content}"</span>
+                    <div className="mt-4 p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/50 flex items-start gap-3 text-sm">
+                      <span className="shrink-0 px-2 py-0.5 rounded-full bg-amber-600 text-white text-[10px] font-bold uppercase tracking-wider">触发追问</span>
+                      <span className="text-amber-800 dark:text-amber-200 leading-relaxed font-medium">"{trigger.content}"</span>
                     </div>
                   )}
                 </>
               ) : (
-                <div className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+                <div className="text-base leading-relaxed text-text-primary font-medium">
                   {step.content}
                 </div>
               )}
@@ -307,26 +307,26 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
   const secondInsight = focusMap.insights.find(i => i.level.includes('高') && !i.level.includes('极高'));
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="min-h-screen bg-bg-base font-sans text-text-primary selection:bg-emerald-100 selection:text-emerald-900 transition-colors duration-200">
 
       {/* Header */}
-      <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 sticky top-0 z-50 bg-opacity-90 dark:bg-opacity-90 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+      <header className="bg-bg-base/80 sticky top-0 z-50 backdrop-blur-xl border-b border-border-main/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-4">
             {onBack && (
-              <button onClick={onBack} className="mr-2 flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
-                <ArrowLeft size={16} />
-                <span className="hidden sm:inline">返回主页</span>
+              <button onClick={onBack} className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-text-secondary bg-bg-surface bento-shadow border border-border-main rounded-full hover:text-emerald-600 transition-all">
+                <ArrowLeft size={18} />
+                <span className="hidden sm:inline">返回</span>
               </button>
             )}
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-emerald-500/20">
               R
             </div>
-            <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 hidden sm:block">面试对话分析报告</h1>
+            <h1 className="text-xl font-bold tracking-tight hidden sm:block">面试对话分析</h1>
           </div>
-          <div className="flex items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400">
-            <span className="flex items-center gap-1"><User size={14} /> {meta.position}</span>
-            <span className="hidden sm:flex items-center gap-1"><Clock size={14} /> {meta.date}</span>
+          <div className="flex items-center gap-6 text-sm font-bold text-text-secondary">
+            <span className="flex items-center gap-2 bg-bg-surface px-4 py-2 rounded-full bento-shadow border border-border-main"><User size={16} className="text-emerald-600" /> {meta.position}</span>
+            <span className="hidden sm:flex items-center gap-2 bg-bg-surface px-4 py-2 rounded-full bento-shadow border border-border-main"><Clock size={16} className="text-emerald-600" /> {meta.date}</span>
           </div>
         </div>
       </header>
@@ -336,24 +336,24 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
 
           {/* Sidebar Navigation */}
           <aside className="hidden lg:block lg:col-span-3">
-            <nav className="sticky top-24 space-y-1">
+            <nav className="sticky top-32 space-y-2">
               {(() => {
                 const chineseNumbers = ['一', '二', '三', '四', '五', '六', '七', '八'];
                 const navItems = [
                   data.positionSummary ? { id: 'position', label: '岗位摘要', icon: Briefcase } : null,
-                  { id: 'summary', label: '候选人表现摘要', icon: CheckCircle2 },
-                  { id: 'questions', label: '面试官问题列表', icon: MessageSquare },
+                  { id: 'summary', label: '表现摘要', icon: CheckCircle2 },
+                  { id: 'questions', label: '问题列表', icon: MessageSquare },
                   { id: 'chains', label: '对话链分析', icon: TrendingUp },
-                  { id: 'focus', label: '面试官关注图谱', icon: Target },
+                  { id: 'focus', label: '关注图谱', icon: Target },
                   data.fitAnalysis ? { id: 'fit', label: '契合度分析', icon: BarChart3 } : null,
                 ].filter(Boolean) as { id: string; label: string; icon: React.FC<any> }[];
                 return navItems.map((item, idx) => (
                   <a
                     key={item.id}
                     href={`#${item.id}`}
-                    className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-400 rounded-lg hover:bg-white dark:hover:bg-zinc-800 hover:text-indigo-600 hover:shadow-sm dark:hover:shadow-zinc-900/50 transition-all group"
+                    className="flex items-center gap-4 px-6 py-4 text-sm font-bold text-text-secondary rounded-2xl hover:bg-bg-surface hover:text-emerald-600 hover:bento-shadow border border-transparent hover:border-border-main transition-all group"
                   >
-                    <item.icon size={16} className="group-hover:text-indigo-600 transition-colors" />
+                    <item.icon size={18} className="group-hover:text-emerald-600 transition-colors" />
                     {chineseNumbers[idx]}、{item.label}
                   </a>
                 ));
@@ -362,7 +362,7 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
           </aside>
 
           {/* Main Content */}
-          <main className="lg:col-span-9 space-y-12">
+          <main className="lg:col-span-9 space-y-16">
 
             {/* Dynamic section numbering */}
             {(() => {
@@ -380,25 +380,25 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
 
             {/* Position Summary (conditional) */}
             {data.positionSummary && (
-              <Section id="position" title={`${positionNum}、岗位摘要`} icon={<Briefcase size={20} />}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Section id="position" title={`${positionNum}、岗位摘要`} icon={<Briefcase size={24} />}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <Card>
-                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100">
+                    <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 font-bold text-text-primary">
                       核心职责与要求
                     </div>
-                    <div className="p-6 space-y-4">
+                    <div className="p-8 space-y-5">
                       {data.positionSummary.responsibilities.map((r, i) => (
-                        <div key={i} className="flex gap-3">
-                          <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-2 shrink-0" />
-                          <span className="text-sm text-zinc-700 dark:text-zinc-300">{r}</span>
+                        <div key={i} className="flex gap-4">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                          <span className="text-base text-text-primary font-medium">{r}</span>
                         </div>
                       ))}
                       {data.positionSummary.requirements.length > 0 && (
-                        <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
+                        <div className="pt-4 border-t border-border-main space-y-5">
                           {data.positionSummary.requirements.map((r, i) => (
-                            <div key={i} className="flex gap-3">
-                              <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 shrink-0" />
-                              <span className="text-sm text-zinc-700 dark:text-zinc-300">{r}</span>
+                            <div key={i} className="flex gap-4">
+                              <div className="w-2 h-2 rounded-full bg-amber-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+                              <span className="text-base text-text-primary font-medium">{r}</span>
                             </div>
                           ))}
                         </div>
@@ -406,33 +406,33 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                     </div>
                   </Card>
                   <Card>
-                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100">
+                    <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 font-bold text-text-primary">
                       工作环境
                     </div>
-                    <div className="p-6 space-y-4">
-                      <div className="text-sm">
-                        <span className="font-semibold text-zinc-900 dark:text-zinc-100">工作强度：</span>
-                        <span className="text-zinc-600 dark:text-zinc-400">{data.positionSummary.workIntensity}</span>
+                    <div className="p-8 space-y-6">
+                      <div className="text-base">
+                        <span className="font-bold text-text-secondary">工作强度：</span>
+                        <span className="text-text-primary font-medium">{data.positionSummary.workIntensity}</span>
                       </div>
-                      <div className="text-sm">
-                        <span className="font-semibold text-zinc-900 dark:text-zinc-100">团队文化：</span>
-                        <span className="text-zinc-600 dark:text-zinc-400">{data.positionSummary.teamCulture}</span>
+                      <div className="text-base">
+                        <span className="font-bold text-text-secondary">团队文化：</span>
+                        <span className="text-text-primary font-medium">{data.positionSummary.teamCulture}</span>
                       </div>
                       {data.positionSummary.keyKPIs.length > 0 && (
-                        <div className="space-y-2">
-                          <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">关键 KPI：</span>
+                        <div className="space-y-3">
+                          <span className="text-base font-bold text-text-secondary">关键 KPI：</span>
                           {data.positionSummary.keyKPIs.map((kpi, i) => (
-                            <div key={i} className="flex gap-3 ml-2">
-                              <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-2 shrink-0" />
-                              <span className="text-sm text-zinc-600 dark:text-zinc-400">{kpi}</span>
+                            <div key={i} className="flex gap-4 ml-3">
+                              <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2.5 shrink-0" />
+                              <span className="text-base text-text-primary font-medium">{kpi}</span>
                             </div>
                           ))}
                         </div>
                       )}
                       {data.positionSummary.highlights && (
-                        <div className="text-sm">
-                          <span className="font-semibold text-zinc-900 dark:text-zinc-100">亮点：</span>
-                          <span className="text-zinc-600 dark:text-zinc-400">{data.positionSummary.highlights}</span>
+                        <div className="text-base bg-emerald-50 dark:bg-emerald-900/10 p-5 rounded-2xl border border-emerald-100 dark:border-emerald-800/50">
+                          <span className="font-bold text-emerald-700 dark:text-emerald-300">亮点：</span>
+                          <span className="text-emerald-900 dark:text-emerald-100 font-medium">{data.positionSummary.highlights}</span>
                         </div>
                       )}
                     </div>
@@ -442,95 +442,93 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
             )}
 
             {/* Candidate Summary */}
-            <Section id="summary" title={`${summaryNum}、候选人表现摘要`} icon={<CheckCircle2 size={20} />}>
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card>
-                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                      <Brain size={18} className="text-zinc-500 dark:text-zinc-400" /> 展现能力
-                    </div>
-                    <div className="p-6 space-y-4">
-                      {candidateSummary.abilities.map((item, i) => (
-                        <div key={i} className="flex gap-3">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0" />
-                          <div>
-                            <span className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">{item.label}：</span>
-                            <span className="text-zinc-600 dark:text-zinc-400 text-sm">{item.description}</span>
-                          </div>
+            <Section id="summary" title={`${summaryNum}、候选人表现摘要`} icon={<CheckCircle2 size={24} />}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <Card>
+                  <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 font-bold text-text-primary flex items-center gap-3">
+                    <Brain size={20} className="text-emerald-600" /> 展现能力
+                  </div>
+                  <div className="p-8 space-y-6">
+                    {candidateSummary.abilities.map((item, i) => (
+                      <div key={i} className="flex gap-4">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                        <div>
+                          <span className="font-bold text-text-primary text-base">{item.label}：</span>
+                          <span className="text-text-secondary text-base font-medium leading-relaxed">{item.description}</span>
                         </div>
-                      ))}
-                    </div>
-                  </Card>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
 
-                  <Card>
-                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                      <AlertTriangle size={18} className="text-zinc-500 dark:text-zinc-400" /> 潜在风险
-                    </div>
-                    <div className="p-6 space-y-4">
-                      {candidateSummary.risks.map((item, i) => (
-                        <div key={i} className="flex gap-3">
-                          <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 shrink-0" />
-                          <div>
-                            <span className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">{item.label}：</span>
-                            <span className="text-zinc-600 dark:text-zinc-400 text-sm">{item.description}</span>
-                          </div>
+                <Card>
+                  <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 font-bold text-text-primary flex items-center gap-3">
+                    <AlertTriangle size={20} className="text-amber-500" /> 潜在风险
+                  </div>
+                  <div className="p-8 space-y-6">
+                    {candidateSummary.risks.map((item, i) => (
+                      <div key={i} className="flex gap-4">
+                        <div className="w-2 h-2 rounded-full bg-amber-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+                        <div>
+                          <span className="font-bold text-text-primary text-base">{item.label}：</span>
+                          <span className="text-text-secondary text-base font-medium leading-relaxed">{item.description}</span>
                         </div>
-                      ))}
-                    </div>
-                  </Card>
-                </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
               </div>
             </Section>
 
             {/* Questions List */}
-            <Section id="questions" title={`${questionsNum}、面试官问题列表`} icon={<MessageSquare size={20} />}>
-              <div className="flex flex-wrap gap-2 mb-4">
+            <Section id="questions" title={`${questionsNum}、面试官问题列表`} icon={<MessageSquare size={24} />}>
+              <div className="flex flex-wrap gap-3 mb-8">
                 {(['全部', '预设', '追问', '澄清'] as const).map(tab => (
                   <button
                     key={tab}
                     onClick={() => setQuestionFilter(tab)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                    className={`px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest border transition-all ${
                       questionFilter === tab
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                        : 'bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-indigo-300 hover:text-indigo-600'
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-500/25'
+                        : 'bg-bg-surface text-text-secondary border-border-main hover:border-emerald-400 hover:text-emerald-600 bento-shadow'
                     }`}
                   >
                     {tab}
                     {tab !== '全部' && (
-                      <span className="ml-1 opacity-70">
+                      <span className="ml-2 opacity-60">
                         {tab === '预设' ? questionStats.preset : tab === '追问' ? questionStats.followUp : questionStats.clarification}
                       </span>
                     )}
                   </button>
                 ))}
               </div>
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 xl:items-start">
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
                 {/* Left: Question table */}
-                <Card className="xl:max-h-[800px] overflow-y-auto">
-                  <div className="overflow-x-auto">
+                <Card className="xl:col-span-7 xl:max-h-[800px] flex flex-col">
+                  <div className="overflow-x-auto flex-1">
                     <table className="w-full text-sm text-left">
-                      <thead className="text-xs text-zinc-500 dark:text-zinc-400 uppercase bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-700">
+                      <thead className="text-[10px] text-text-secondary uppercase tracking-widest bg-bg-base border-b border-border-main">
                         <tr>
-                          <th className="px-6 py-3 font-medium tracking-wider">编号</th>
-                          <th className="px-6 py-3 font-medium tracking-wider">问题文本</th>
-                          <th className="px-6 py-3 font-medium tracking-wider">类型</th>
+                          <th className="px-8 py-4 font-bold">编号</th>
+                          <th className="px-8 py-4 font-bold">问题文本</th>
+                          <th className="px-8 py-4 font-bold">类型</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                      <tbody className="divide-y divide-border-main">
                         {filteredQuestions.map((q, i) => (
                           <tr
                             key={i}
                             onClick={() => q.timestamp && handleQuestionClick(q.timestamp)}
-                            className={`transition-colors ${q.timestamp ? 'cursor-pointer hover:bg-indigo-50/60 dark:hover:bg-indigo-950/60' : 'hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50'}`}
+                            className={`transition-all duration-200 ${q.timestamp ? 'cursor-pointer hover:bg-emerald-50/40 dark:hover:bg-emerald-900/10' : 'hover:bg-bg-base/40'}`}
                           >
-                            <td className="px-6 py-4 text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
-                              <div className="flex items-center gap-2">
+                            <td className="px-8 py-6 text-text-primary whitespace-nowrap">
+                              <div className="flex items-center gap-3 font-bold">
                                 {q.id}
-                                {q.timestamp && <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500">{q.timestamp}</span>}
+                                {q.timestamp && <span className="text-[10px] font-mono text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">{q.timestamp}</span>}
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">{q.text}</td>
-                            <td className="px-6 py-4 text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
+                            <td className="px-8 py-6 text-text-primary font-medium leading-relaxed">{q.text}</td>
+                            <td className="px-8 py-6 text-text-primary">
                               <Badge color={getQuestionBadgeColor(q.type)}>{q.type}</Badge>
                             </td>
                           </tr>
@@ -538,22 +536,22 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                       </tbody>
                     </table>
                   </div>
-                  <div className="bg-zinc-50 dark:bg-zinc-950 p-4 border-t border-zinc-100 dark:border-zinc-800 flex gap-4 text-sm text-zinc-600 dark:text-zinc-400">
-                    <span className="font-medium">统计：</span>
-                    <span>预设问题: {questionStats.preset}</span>
+                  <div className="bg-bg-base p-6 border-t border-border-main flex flex-wrap gap-6 text-[11px] font-bold uppercase tracking-widest text-text-secondary">
+                    <span className="text-text-primary">数据统计</span>
+                    <span>预设: {questionStats.preset}</span>
                     <span>追问: {questionStats.followUp}</span>
                     <span>澄清: {questionStats.clarification}</span>
                   </div>
                 </Card>
 
                 {/* Right: Transcript chat */}
-                <Card className="xl:max-h-[800px] flex flex-col xl:sticky xl:top-4">
-                  <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/50 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <MessageCircle size={16} className="text-zinc-500 dark:text-zinc-400" />
-                      <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">转写全文</h3>
+                <Card className="xl:col-span-5 xl:max-h-[800px] flex flex-col xl:sticky xl:top-28">
+                  <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <MessageCircle size={20} className="text-emerald-600" />
+                      <h3 className="font-bold text-text-primary">转写全文</h3>
                     </div>
-                    <span className="text-xs text-zinc-400 dark:text-zinc-500">{transcript.length} 条对话</span>
+                    <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">{transcript.length} 轮对话</span>
                   </div>
                   <TranscriptChat
                     segments={transcript}
@@ -567,33 +565,32 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
             </Section>
 
             {/* Dialogue Chains */}
-            <Section id="chains" title={`${chainsNum}、对话链分析`} icon={<TrendingUp size={20} />}>
+            <Section id="chains" title={`${chainsNum}、对话链分析`} icon={<TrendingUp size={24} />}>
               {(() => {
                 const sorted = [...dialogueChains].sort((a, b) => b.steps.length - a.steps.length);
-                // Top 2 are key chains (full width), rest are secondary (2-column)
                 const key = sorted.slice(0, 2);
                 const rest = sorted.slice(2);
                 return (
-                  <>
+                  <div className="space-y-8">
                     {key.map((chain, idx) => (
                       <DialogueChainView key={`key-${idx}`} title={chain.title} steps={chain.steps} />
                     ))}
                     {rest.length > 0 && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {rest.map((chain, idx) => (
                           <DialogueChainView key={`rest-${idx}`} title={chain.title} steps={chain.steps} />
                         ))}
                       </div>
                     )}
-                  </>
+                  </div>
                 );
               })()}
             </Section>
 
             {/* Focus Map */}
-            <Section id="focus" title={`${focusNum}、面试官关注图谱`} icon={<Target size={20} />}>
-              <Card className="mb-6">
-                <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100">话题深度热力图</div>
+            <Section id="focus" title={`${focusNum}、面试官关注图谱`} icon={<Target size={24} />}>
+              <Card className="mb-8">
+                <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 font-bold text-text-primary">话题深度热力图</div>
                 <Table
                   headers={['话题', '追问层数', '涉及问题', '关注等级']}
                   rows={focusMap.topics.map(t => [
@@ -605,20 +602,27 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                 />
               </Card>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {topInsight && (
-                  <Card className="p-6 bg-red-50/50 dark:bg-red-950/50 border-red-100 dark:border-red-800">
-                    <div className="flex items-start gap-3">
-                      <AlertTriangle className="text-red-600 dark:text-red-400 mt-1 shrink-0" size={20} />
+                  <Card className="p-8 bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-800/50">
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-2xl text-red-600 shrink-0">
+                        <AlertTriangle size={24} />
+                      </div>
                       <div>
-                        <h3 className="font-bold text-red-900 dark:text-red-200 mb-2">极高关注：{topInsight.title}</h3>
-                        <div className="text-sm text-red-800 dark:text-red-300 leading-relaxed">
-                          <p>{topInsight.description}</p>
-                          <ul className="list-disc pl-4 mt-2 space-y-1">
-                            {topInsight.points.map((p, i) => <li key={i}>{p}</li>)}
+                        <h3 className="text-xl font-bold text-red-900 dark:text-red-200 mb-4">极高关注：{topInsight.title}</h3>
+                        <div className="text-base text-red-800 dark:text-red-300 leading-relaxed font-medium">
+                          <p className="mb-4">{topInsight.description}</p>
+                          <ul className="space-y-3">
+                            {topInsight.points.map((p, i) => (
+                              <li key={i} className="flex gap-3">
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-2 shrink-0" />
+                                {p}
+                              </li>
+                            ))}
                           </ul>
                           {topInsight.coreQuestion && (
-                            <div className="mt-3 font-semibold text-red-900 dark:text-red-200">
+                            <div className="mt-6 p-4 rounded-2xl bg-red-100/50 dark:bg-red-900/40 border border-red-200/50 dark:border-red-700/50 font-bold text-red-900 dark:text-red-100">
                               核心问题：{topInsight.coreQuestion}
                             </div>
                           )}
@@ -629,15 +633,22 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                 )}
 
                 {secondInsight && (
-                  <Card className="p-6 bg-amber-50/50 dark:bg-amber-950/50 border-amber-100 dark:border-amber-800">
-                    <div className="flex items-start gap-3">
-                      <Search className="text-amber-600 dark:text-amber-400 mt-1 shrink-0" size={20} />
+                  <Card className="p-8 bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-800/50">
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-2xl text-amber-600 shrink-0">
+                        <Search size={24} />
+                      </div>
                       <div>
-                        <h3 className="font-bold text-amber-900 dark:text-amber-200 mb-2">高关注：{secondInsight.title}</h3>
-                        <div className="text-sm text-amber-800 dark:text-amber-300 leading-relaxed">
-                          <p>{secondInsight.description}</p>
-                          <ul className="list-disc pl-4 mt-2 space-y-1">
-                            {secondInsight.points.map((p, i) => <li key={i}>{p}</li>)}
+                        <h3 className="text-xl font-bold text-amber-900 dark:text-amber-200 mb-4">高关注：{secondInsight.title}</h3>
+                        <div className="text-base text-amber-800 dark:text-amber-300 leading-relaxed font-medium">
+                          <p className="mb-4">{secondInsight.description}</p>
+                          <ul className="space-y-3">
+                            {secondInsight.points.map((p, i) => (
+                              <li key={i} className="flex gap-3">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 shrink-0" />
+                                {p}
+                              </li>
+                            ))}
                           </ul>
                         </div>
                       </div>
@@ -649,26 +660,26 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
 
             {/* Fit Analysis (conditional) */}
             {data.fitAnalysis && (
-              <Section id="fit" title={`${fitNum}、契合度分析`} icon={<BarChart3 size={20} />}>
+              <Section id="fit" title={`${fitNum}、契合度分析`} icon={<BarChart3 size={24} />}>
                 {/* Overall Score */}
-                <Card className="mb-6">
-                  <div className="p-6 flex flex-col items-center text-center">
-                    <div className={`text-5xl font-bold mb-2 ${
-                      data.fitAnalysis.overallScore >= 80 ? 'text-emerald-600 dark:text-emerald-400' :
-                      data.fitAnalysis.overallScore >= 60 ? 'text-amber-600 dark:text-amber-400' :
-                      'text-red-600 dark:text-red-400'
+                <Card className="mb-8">
+                  <div className="p-10 flex flex-col items-center text-center">
+                    <div className={`text-7xl font-black mb-4 ${
+                      data.fitAnalysis.overallScore >= 80 ? 'text-emerald-600' :
+                      data.fitAnalysis.overallScore >= 60 ? 'text-amber-500' :
+                      'text-red-600'
                     }`}>
                       {data.fitAnalysis.overallScore}
                     </div>
-                    <div className="text-sm text-zinc-500 dark:text-zinc-400 mb-3">综合契合度评分</div>
-                    <p className="text-sm text-zinc-700 dark:text-zinc-300 max-w-lg leading-relaxed">
+                    <div className="text-xs font-bold text-text-secondary uppercase tracking-widest mb-6">综合契合度评分</div>
+                    <p className="text-lg text-text-primary max-w-2xl leading-relaxed font-bold">
                       {data.fitAnalysis.recommendation}
                     </p>
                   </div>
                 </Card>
 
                 {/* Dimensions Table */}
-                <Card className="mb-6">
+                <Card className="mb-8">
                   <Table
                     headers={['维度', 'JD 要求', '候选人证据', '得分', '评价']}
                     rows={data.fitAnalysis.dimensions.map(d => [
@@ -682,29 +693,29 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                 </Card>
 
                 {/* Strengths & Gaps */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <Card>
-                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100">
+                    <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 font-bold text-text-primary">
                       优势匹配
                     </div>
-                    <div className="p-6 space-y-3">
+                    <div className="p-8 space-y-5">
                       {data.fitAnalysis.strengths.map((s, i) => (
-                        <div key={i} className="flex gap-3">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0" />
-                          <span className="text-sm text-zinc-700 dark:text-zinc-300">{s}</span>
+                        <div key={i} className="flex gap-4">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                          <span className="text-base text-text-primary font-bold">{s}</span>
                         </div>
                       ))}
                     </div>
                   </Card>
                   <Card>
-                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100">
+                    <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 font-bold text-text-primary">
                       待提升
                     </div>
-                    <div className="p-6 space-y-3">
+                    <div className="p-8 space-y-5">
                       {data.fitAnalysis.gaps.map((g, i) => (
-                        <div key={i} className="flex gap-3">
-                          <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 shrink-0" />
-                          <span className="text-sm text-zinc-700 dark:text-zinc-300">{g}</span>
+                        <div key={i} className="flex gap-4">
+                          <div className="w-2 h-2 rounded-full bg-amber-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+                          <span className="text-base text-text-primary font-bold">{g}</span>
                         </div>
                       ))}
                     </div>
@@ -716,9 +727,9 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
               </>);
             })()}
 
-            <footer className="text-center text-zinc-400 dark:text-zinc-500 text-sm py-12 border-t border-zinc-200 dark:border-zinc-700 mt-12">
-              <p>本报告由 AI 分析层（{meta.model}）依据 CLAUDE.md 5步分析流程生成</p>
-              <p className="mt-1">原始数据来源：{meta.source}</p>
+            <footer className="text-center text-text-secondary text-sm font-medium py-16 border-t border-border-main mt-16">
+              <p>本报告由 AI 分析层（{meta.model}）依据高阶分析流程生成</p>
+              <p className="mt-2 text-[10px] font-bold uppercase tracking-widest opacity-60">原始数据：{meta.source}</p>
             </footer>
 
           </main>

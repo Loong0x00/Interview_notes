@@ -1,3 +1,49 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-brand: var(--brand);
+  --color-bg-base: var(--bg-base);
+  --color-bg-surface: var(--bg-surface);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-border-main: var(--border-color);
+  
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+}
+
+:root {
+  --bg-base: #F4F6F8;
+  --bg-surface: #FFFFFF;
+  --text-primary: #1A1D1F;
+  --text-secondary: #6F767E;
+  --border-color: #EFEFEF;
+  --brand: #059669; /* emerald-600 */
+}
+
+.dark {
+  --bg-base: #111315;
+  --bg-surface: #1A1D1F;
+  --text-primary: #EFEFEF;
+  --text-secondary: #9A9FA5;
+  --border-color: #272B30;
+  --brand: #10B981; /* emerald-500 */
+}
+
+@layer base {
+  body {
+    @apply bg-bg-base text-text-primary antialiased transition-colors duration-200;
+  }
+}
+
+@layer utilities {
+  .bento-shadow {
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+  }
+  .dark .bento-shadow {
+    box-shadow: none;
+    border: 1px solid var(--border-color);
+  }
+}

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, FileAudio, FileText, CheckCircle, AlertCircle, Loader, Sun, Moon, ArrowLeft } from "lucide-react";
+import { Upload, FileAudio, FileText, CheckCircle, AlertCircle, Loader, ArrowLeft, Sun, Moon } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -12,7 +12,6 @@ interface JobState {
   id: string;
   status: string;
   progress: string;
-  progressPercent?: number;
   error?: string;
   result?: string;
 }
@@ -53,8 +52,7 @@ function formatSize(bytes: number): string {
 }
 
 export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
-  const { authFetch, logout } = useAuth();
-  const { theme, toggle: toggleTheme } = useTheme();
+  const { authFetch } = useAuth();
   const [mode, setMode] = useState<UploadMode>("audio");
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -221,62 +219,52 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
   const FileIcon = mode === "audio" ? FileAudio : FileText;
 
   return (
-    <div className="min-h-screen bg-bg-base font-sans text-text-primary transition-colors duration-200">
-      {/* Header — consistent with App.tsx list page */}
-      <header className="bg-transparent">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={onBack}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-text-secondary bg-bg-surface bento-shadow border border-border-main rounded-full hover:text-emerald-600 transition-all"
-            >
-              <ArrowLeft size={18} />
-              返回
-            </button>
-            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-emerald-500/20">R</div>
-            <h1 className="text-xl font-bold text-text-primary tracking-tight">上传面试</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={toggleTheme}
-              className="p-2.5 rounded-full text-text-secondary hover:bg-bg-surface hover:text-emerald-600 transition-all bento-shadow border border-transparent hover:border-border-main"
-              aria-label="Toggle theme"
-            >
-              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-            </button>
-            <button onClick={logout} className="text-sm text-text-secondary hover:text-text-primary transition-colors font-medium">退出登录</button>
-          </div>
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100">
+      {/* Header */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-1 text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors mb-6"
+        >
+          <ChevronLeft size={16} />
+          返回报告列表
+        </button>
+        <div className="text-center space-y-2">
+          <h1 className="text-4xl font-light tracking-tight text-zinc-900 dark:text-zinc-100">
+            面试洞察 AI
+          </h1>
+          <p className="text-zinc-500 dark:text-zinc-400 font-light">
+            上传面试录音或逐字稿，结合简历及岗位 JD，开始 AI 深度分析。
+          </p>
         </div>
-      </header>
+      </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
 
-          {/* ===== Left Column (4/12): JD + CV ===== */}
-          <div className="lg:col-span-4 space-y-8">
+          {/* ===== Left Column (1/3): JD + CV — always visible ===== */}
+          <div className="space-y-6">
             {/* JD Textarea */}
-            <div className="bg-bg-surface rounded-3xl bento-shadow border border-border-main p-8 space-y-4">
-              <div>
-                <h2 className="text-lg font-bold text-text-primary">岗位 JD</h2>
-                <p className="text-sm text-text-secondary mt-1">提供后将生成岗位画像与契合度</p>
-              </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                岗位 JD (选填)
+              </label>
               <textarea
                 value={jdText}
                 onChange={(e) => setJdText(e.target.value)}
                 placeholder="粘贴岗位描述..."
-                className="w-full h-48 p-5 bg-bg-base border border-border-main rounded-2xl text-base text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all resize-none"
+                className="w-full h-36 p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:focus:ring-indigo-400/30 transition-all resize-none"
               />
             </div>
 
             {/* CV Upload */}
-            <div className="bg-bg-surface rounded-3xl bento-shadow border border-border-main p-8 space-y-4">
-              <div>
-                <h2 className="text-lg font-bold text-text-primary">求职者简历</h2>
-                <p className="text-sm text-text-secondary mt-1">支持 PDF、Word 格式</p>
-              </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                求职者简历 (选填)
+              </label>
               <div
                 onClick={() => cvInputRef.current?.click()}
-                className="relative group border-2 border-dashed border-border-main rounded-2xl p-8 transition-all hover:border-emerald-500 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10 cursor-pointer bg-bg-base flex flex-col items-center justify-center space-y-3"
+                className="relative group border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-2xl p-6 transition-all hover:border-zinc-400 dark:hover:border-zinc-500 cursor-pointer bg-white/50 dark:bg-zinc-900/50 flex flex-col items-center justify-center space-y-2"
               >
                 <input
                   ref={cvInputRef}
@@ -285,38 +273,38 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                   onChange={(e) => setCvFile(e.target.files?.[0] || null)}
                   className="hidden"
                 />
-                <div className="w-12 h-12 bg-bg-surface rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                  <Upload className="w-6 h-6 text-text-secondary group-hover:text-emerald-600" />
+                <div className="w-10 h-10 bg-white dark:bg-zinc-800 rounded-xl shadow-sm dark:shadow-zinc-900/50 flex items-center justify-center">
+                  <Upload className="w-5 h-5 text-zinc-400 dark:text-zinc-500" />
                 </div>
-                <span className="text-sm font-bold text-text-secondary group-hover:text-text-primary">
-                  {cvFile ? cvFile.name : '点击选择简历'}
+                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                  {cvFile ? cvFile.name : '上传 PDF 或 Word 简历'}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* ===== Right Column (8/12): Toggle + Upload + Progress ===== */}
-          <div className="lg:col-span-8 space-y-8">
+          {/* ===== Right Column (2/3): Toggle + Upload + Progress ===== */}
+          <div className="md:col-span-2 space-y-6">
 
             {/* Upload Type Toggle — pill style */}
             {!job && (
-              <div className="flex bg-bg-surface bento-shadow border border-border-main p-1.5 rounded-full w-fit">
+              <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-2xl w-fit">
                 <button
                   onClick={() => switchMode("audio")}
-                  className={`px-8 py-3 rounded-full text-sm font-bold transition-all ${
+                  className={`px-6 py-2 rounded-xl text-xs font-bold transition-all ${
                     mode === "audio"
-                      ? "bg-emerald-600 shadow-lg shadow-emerald-500/20 text-white"
-                      : "text-text-secondary hover:text-text-primary"
+                      ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-zinc-100"
+                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
                   }`}
                 >
                   面试录音
                 </button>
                 <button
                   onClick={() => switchMode("transcript")}
-                  className={`px-8 py-3 rounded-full text-sm font-bold transition-all ${
+                  className={`px-6 py-2 rounded-xl text-xs font-bold transition-all ${
                     mode === "transcript"
-                      ? "bg-emerald-600 shadow-lg shadow-emerald-500/20 text-white"
-                      : "text-text-secondary hover:text-text-primary"
+                      ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-zinc-100"
+                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
                   }`}
                 >
                   面试逐字稿
@@ -324,8 +312,8 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
               </div>
             )}
 
-            {/* Sub-grid: Upload zone + Progress tracker */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Sub-grid: Upload zone (left) + Progress tracker (right) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
               {/* Drop Zone */}
               <div
@@ -334,15 +322,15 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                 onDrop={onDrop}
                 onClick={() => !uploading && fileInputRef.current?.click()}
                 className={`
-                  group relative min-h-[320px] border-2 border-dashed rounded-3xl p-10
-                  transition-all duration-300 flex flex-col items-center justify-center text-center
+                  group relative min-h-[280px] border-2 border-dashed rounded-3xl p-8
+                  transition-all duration-200 flex flex-col items-center justify-center text-center
                   ${uploading ? "pointer-events-none opacity-50" : "cursor-pointer"}
                   ${
                     dragging
-                      ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20"
+                      ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950"
                       : file
-                      ? "border-emerald-300 dark:border-emerald-700 bg-bg-surface bento-shadow"
-                      : "border-border-main bg-bg-surface bento-shadow hover:border-emerald-400 hover:shadow-xl hover:shadow-emerald-500/5"
+                      ? "border-indigo-300 dark:border-indigo-700 bg-white dark:bg-zinc-900"
+                      : "border-zinc-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/50 hover:border-zinc-400 dark:hover:border-zinc-500"
                   }
                 `}
               >
@@ -355,33 +343,35 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                 />
 
                 {file ? (
-                  <div className="space-y-4">
-                    <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950 rounded-2xl flex items-center justify-center mx-auto group-hover:scale-110 transition-transform shadow-sm">
-                      <FileIcon className="w-8 h-8 text-emerald-600" />
+                  <div className="space-y-3">
+                    <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-950 rounded-2xl shadow-sm flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
+                      <FileIcon className="w-8 h-8 text-indigo-500 dark:text-indigo-400" />
                     </div>
                     <div>
-                      <p className="text-lg font-bold text-text-primary">
+                      <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                         {file.name}
                       </p>
-                      <p className="text-sm text-text-secondary mt-1">
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                         {formatSize(file.size)}
                       </p>
                     </div>
-                    <p className="text-xs font-bold text-emerald-600 pt-2 uppercase tracking-wider">
-                      点击更换文件
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                      点击或拖拽替换文件
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-6">
-                    <div className="w-16 h-16 bg-bg-base rounded-2xl flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
-                      <Upload className="w-8 h-8 text-text-secondary" />
+                  <div className="space-y-3">
+                    <div className="w-16 h-16 bg-white dark:bg-zinc-800 rounded-2xl shadow-sm dark:shadow-zinc-900/50 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
+                      <Upload className="w-8 h-8 text-zinc-400 dark:text-zinc-500" />
                     </div>
-                    <div className="space-y-2">
-                      <p className="text-lg font-bold text-text-primary">
-                        {mode === "audio" ? "上传面试录音" : "上传逐字稿文件"}
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
+                        {mode === "audio" ? "点击上传录音" : "点击上传逐字稿"}
                       </p>
-                      <p className="text-sm text-text-secondary max-w-[200px] mx-auto">
-                        拖拽文件到此处或点击选择开始 AI 分析
+                      <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                        {mode === "audio"
+                          ? "支持 M4A, MP3, WAV, FLAC, MP4, AAC, OGG, WMA"
+                          : "支持 TXT, JSON, SRT, VTT, DOCX"}
                       </p>
                     </div>
                   </div>
@@ -389,65 +379,52 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
               </div>
 
               {/* Progress Tracker Panel */}
-              <div className="bg-bg-surface rounded-3xl p-8 flex flex-col justify-center space-y-6 bento-shadow border border-border-main">
-                <h3 className="text-base font-bold text-text-primary">
+              <div className="bg-white/50 dark:bg-zinc-900/50 rounded-3xl p-8 flex flex-col justify-center space-y-6 border border-zinc-200 dark:border-zinc-700">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
                   处理进度
                 </h3>
-                <div className="space-y-6">
+                <div className="space-y-5">
                   {steps.map((step, i) => {
                     const isActive = job ? stepIndex === i : false;
                     const isDone = job ? (stepIndex > i || job.status === "done") : false;
+                    const isPending = !isActive && !isDone;
 
                     return (
-                      <div key={step.key} className="space-y-3">
+                      <div key={step.key} className="space-y-2">
                         <div className="flex justify-between items-center">
                           <span
-                            className={`text-xs font-bold uppercase tracking-widest ${
+                            className={`text-[11px] font-bold uppercase tracking-wider ${
                               isActive
-                                ? "text-emerald-600"
+                                ? "text-indigo-600 dark:text-indigo-400"
                                 : isDone
-                                ? "text-emerald-600"
-                                : "text-text-secondary"
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-zinc-400 dark:text-zinc-500"
                             }`}
                           >
                             {step.label}
                           </span>
-                          <div className="flex items-center gap-2">
-                            {isDone && <CheckCircle className="w-4 h-4 text-emerald-500" />}
-                            {isActive && <Loader className="w-4 h-4 text-emerald-600 animate-spin" />}
+                          <div className="flex items-center gap-1.5">
+                            {isDone && <CheckCircle className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />}
+                            {isActive && <Loader className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400 animate-spin" />}
                           </div>
                         </div>
                         {/* Horizontal progress bar */}
-                        <div className="h-2.5 w-full bg-bg-base rounded-full overflow-hidden border border-border-main">
+                        <div className="h-1.5 w-full bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full transition-all duration-700 ease-out ${
-                              isDone || isActive
-                                ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
-                                : "bg-text-secondary/20"
-                            }`}
-                            style={{
-                              width: isDone
-                                ? "100%"
-                                : isActive && job?.progressPercent
-                                ? `${job.progressPercent}%`
+                              isDone
+                                ? "w-full bg-emerald-500 dark:bg-emerald-400"
                                 : isActive
-                                ? "15%"
-                                : "0%",
-                            }}
+                                ? "w-2/3 bg-indigo-500 dark:bg-indigo-400"
+                                : "w-0 bg-zinc-300 dark:bg-zinc-600"
+                            }`}
                           />
                         </div>
-                        {/* Show progress text */}
+                        {/* Show progress text under the active bar */}
                         {isActive && job && (
-                          <div className="flex justify-between items-center">
-                            <p className="text-xs font-medium text-text-secondary">
-                              {job.progress}
-                            </p>
-                            {job.progressPercent !== undefined && (
-                              <span className="text-xs font-bold text-emerald-600">
-                                {job.progressPercent}%
-                              </span>
-                            )}
-                          </div>
+                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                            {job.progress}
+                          </p>
                         )}
                       </div>
                     );
@@ -456,30 +433,30 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
 
                 {/* File info when job is active */}
                 {job && job.status !== "error" && job.status !== "done" && (
-                  <p className="text-xs font-medium text-text-secondary pt-4 border-t border-border-main truncate">
-                    正在处理：{file?.name || resumedFileName || ''}
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 pt-2 border-t border-zinc-200 dark:border-zinc-700 truncate">
+                    {file?.name || resumedFileName || ''}
                   </p>
                 )}
 
                 {/* Done State */}
                 {job && job.status === "done" && (
-                  <div className="p-5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50 rounded-2xl text-center shadow-sm">
-                    <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
-                    <p className="text-emerald-700 dark:text-emerald-300 font-bold text-sm">
-                      分析完成！正在进入报告...
+                  <div className="p-4 bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 rounded-2xl text-center">
+                    <CheckCircle className="w-6 h-6 text-emerald-500 dark:text-emerald-400 mx-auto mb-2" />
+                    <p className="text-emerald-800 dark:text-emerald-300 font-medium text-sm">
+                      分析完成！正在跳转到报告...
                     </p>
                   </div>
                 )}
 
                 {/* Error State */}
                 {job && job.status === "error" && (
-                  <div className="p-5 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/50 rounded-2xl">
-                    <div className="flex items-start gap-4">
-                      <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
+                  <div className="p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-2xl">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-red-700 dark:text-red-300 font-bold text-sm">处理失败</p>
-                        <p className="text-red-600 dark:text-red-400 text-xs mt-1 font-medium leading-relaxed">
-                          {job.error || "发生了未知错误"}
+                        <p className="text-red-800 dark:text-red-300 font-medium text-sm">处理失败</p>
+                        <p className="text-red-600 dark:text-red-400 text-xs mt-1">
+                          {job.error || "Unknown error"}
                         </p>
                       </div>
                     </div>
@@ -491,9 +468,9 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                         setCvFile(null);
                         setShowContext(false);
                       }}
-                      className="mt-4 w-full py-2.5 text-xs font-bold bg-white dark:bg-bg-surface border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-xl hover:bg-red-50 transition-all"
+                      className="mt-3 px-4 py-2 text-xs bg-white dark:bg-zinc-900 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-xl hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
                     >
-                      重新尝试
+                      重试
                     </button>
                   </div>
                 )}
@@ -502,25 +479,15 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
 
             {/* Upload Button */}
             {file && !job && (
-              <div className="flex justify-center pt-4">
+              <div className="flex justify-start">
                 <button
                   onClick={startUpload}
                   disabled={uploading}
-                  className="px-12 py-4 bg-emerald-600 text-white text-lg font-bold rounded-full
-                    hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed
-                    transition-all shadow-lg shadow-emerald-500/25 group flex items-center gap-3"
+                  className="px-8 py-3 bg-indigo-600 text-white font-medium rounded-2xl
+                    hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed
+                    transition-colors shadow-sm dark:shadow-indigo-900/30"
                 >
-                  {uploading ? (
-                    <>
-                      <Loader className="w-5 h-5 animate-spin" />
-                      正在上传
-                    </>
-                  ) : (
-                    <>
-                      开始分析
-                      <CheckCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                    </>
-                  )}
+                  {uploading ? "上传中..." : "开始分析"}
                 </button>
               </div>
             )}

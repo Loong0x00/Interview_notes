@@ -102,8 +102,8 @@ function AppInner() {
   // Auth loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
-        <div className="text-zinc-400 dark:text-zinc-500 text-sm">Loading...</div>
+      <div className="min-h-screen bg-bg-base flex items-center justify-center">
+        <div className="text-text-secondary text-sm">Loading...</div>
       </div>
     );
   }
@@ -118,8 +118,8 @@ function AppInner() {
 
   const userMenu = (
     <div className="flex items-center gap-3">
-      <span className="text-sm text-zinc-500 dark:text-zinc-400">{user?.username}</span>
-      <button onClick={logout} className="text-sm text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">退出</button>
+      <span className="text-sm text-text-secondary">{user?.username}</span>
+      <button onClick={logout} className="text-sm text-text-secondary hover:text-text-primary transition-colors">退出</button>
     </div>
   );
 
@@ -135,15 +135,15 @@ function AppInner() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
-        <div className="text-zinc-500 dark:text-zinc-400 text-lg">Loading...</div>
+      <div className="min-h-screen bg-bg-base flex items-center justify-center">
+        <div className="text-text-secondary text-lg">Loading...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
+      <div className="min-h-screen bg-bg-base flex items-center justify-center">
         <div className="text-red-500 text-lg">{error}</div>
       </div>
     );
@@ -165,46 +165,56 @@ function AppInner() {
 
   // Report list view
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100">
-      <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <div className="min-h-screen bg-bg-base font-sans text-text-primary">
+      <header className="bg-transparent">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">R</div>
-            <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">面试分析报告</h1>
+            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-emerald-500/20">R</div>
+            <h1 className="text-xl font-bold text-text-primary tracking-tight">面试分析大师</h1>
             <button
               onClick={() => setView('upload')}
-              className="ml-2 px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+              className="ml-4 px-5 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-full hover:bg-emerald-700 transition-all shadow-md shadow-emerald-500/10"
             >
               上传新面试
             </button>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <ThemeToggle />
-            <button onClick={logout} className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors">退出登录</button>
+            <button onClick={logout} className="text-sm text-text-secondary hover:text-text-primary transition-colors font-medium">退出登录</button>
           </div>
         </div>
       </header>
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {sortedReports.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-zinc-400 dark:text-zinc-500 text-lg mb-4">暂无报告</p>
+          <div className="text-center py-24 bg-bg-surface rounded-3xl bento-shadow border border-border-main">
+            <p className="text-text-secondary text-lg mb-6">暂无报告，开始您的第一次分析吧</p>
             <button
               onClick={() => setView('upload')}
-              className="px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+              className="px-8 py-3.5 bg-emerald-600 text-white font-bold rounded-full hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20"
             >
               上传第一份面试
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-6">
             {sortedReports.map(report => (
               <button
                 key={report.name}
                 onClick={() => loadReport(report.name)}
-                className="w-full text-left bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md transition-all"
+                className="w-full text-left bg-bg-surface rounded-2xl bento-shadow border border-transparent hover:border-emerald-500/30 p-8 transition-all group"
               >
-                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{report.position}</h2>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{report.date}</p>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h2 className="text-xl font-bold text-text-primary group-hover:text-emerald-600 transition-colors">{report.position}</h2>
+                    <p className="text-sm text-text-secondary mt-2 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      {report.date}
+                    </p>
+                  </div>
+                  <div className="px-4 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-full uppercase tracking-wider">
+                    已分析
+                  </div>
+                </div>
               </button>
             ))}
           </div>

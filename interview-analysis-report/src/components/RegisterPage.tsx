@@ -27,69 +27,71 @@ export default function RegisterPage({ onGoLogin }: RegisterPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+    <div className="min-h-screen bg-bg-base flex items-center justify-center px-4 transition-colors duration-200">
+      <div className="w-full max-w-md">
+        <div className="flex items-center justify-center gap-3 mb-10">
+          <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-emerald-500/20">
             R
           </div>
-          <span className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Interview Analysis</span>
+          <span className="text-2xl font-bold text-text-primary tracking-tight">面试分析大师</span>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-6 text-center">注册</h2>
+        <div className="bg-bg-surface rounded-3xl bento-shadow border border-border-main p-10">
+          <h2 className="text-2xl font-bold text-text-primary mb-8 text-center">创建账号</h2>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">用户名</label>
+              <label className="block text-sm font-semibold text-text-secondary mb-2 ml-1">用户名</label>
               <input
                 type="text"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="w-full px-4 py-3 border border-border-main rounded-2xl text-base bg-bg-base text-text-primary focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">密码</label>
+              <label className="block text-sm font-semibold text-text-secondary mb-2 ml-1">密码</label>
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="w-full px-4 py-3 border border-border-main rounded-2xl text-base bg-bg-base text-text-primary focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">邀请码</label>
+              <label className="block text-sm font-semibold text-text-secondary mb-2 ml-1">邀请码</label>
               <input
                 type="text"
                 value={inviteCode}
                 onChange={e => setInviteCode(e.target.value.toUpperCase())}
                 placeholder="INVITE-XXXXX"
                 required
-                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg text-sm font-mono bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="w-full px-4 py-3 border border-border-main rounded-2xl text-base font-mono bg-bg-base text-text-primary focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none transition-all"
               />
             </div>
 
             {error && (
-              <p className="text-sm text-red-600">{error}</p>
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium">
+                {error}
+              </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              className="w-full py-4 bg-emerald-600 text-white rounded-full hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-base font-bold shadow-lg shadow-emerald-500/20 mt-2"
             >
-              {loading ? '注册中...' : '注册'}
+              {loading ? '正在注册...' : '注册'}
             </button>
           </form>
 
-          <p className="mt-4 text-center text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mt-8 text-center text-sm text-text-secondary font-medium">
             已有账号？
-            <button onClick={onGoLogin} className="text-indigo-600 hover:text-indigo-700 font-medium ml-1">
+            <button onClick={onGoLogin} className="text-emerald-600 hover:text-emerald-700 font-bold ml-1 transition-colors">
               登录
             </button>
           </p>
