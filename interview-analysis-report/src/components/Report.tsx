@@ -146,6 +146,7 @@ const CollapsibleAnswer: React.FC<{ content: string }> = ({ content }) => {
 };
 
 const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({ title, steps: rawSteps }) => {
+  const [expandedAnswers, setExpandedAnswers] = useState<Set<number>>(new Set());
   // Filter out trigger steps — they'll be rendered inline below their preceding answer
   const steps = rawSteps.filter(s => s.type !== 'trigger');
   // Build a map: for each answer step index in rawSteps, find its following trigger
@@ -159,6 +160,15 @@ const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({
   const rawIndices: number[] = [];
   rawSteps.forEach((s, i) => { if (s.type !== 'trigger') rawIndices.push(i); });
 
+  const toggleAnswer = (idx: number) => {
+    setExpandedAnswers(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  };
+
   return (
   <Card className="mb-8">
     <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 flex justify-between items-center">
@@ -168,6 +178,7 @@ const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({
       <div className="relative pl-10 space-y-10 before:absolute before:left-[13px] before:top-2 before:bottom-2 before:w-[2px] before:bg-border-main">
         {steps.map((step, idx) => {
           const trigger = triggerAfter.get(rawIndices[idx]);
+          const isAnswerExpanded = expandedAnswers.has(idx);
           return (
           <motion.div
             key={idx}
@@ -196,13 +207,27 @@ const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({
                     'text-emerald-600'}`}>
                   {step.label || (step.type === 'question' ? '面试官提问' : step.type === 'clarification' ? '面试官澄清' : '候选人回答')}
                 </span>
-                {step.time && <span className="text-[11px] text-text-secondary font-mono bg-bg-base px-2 py-0.5 rounded-full">{step.time}</span>}
+                {step.time && <span className="text-[11px] text-text-secondary font-mono bg-bg-base px-2 py-0.5 rounded-full">{formatTimeString(step.time)}</span>}
               </div>
 
               {step.type === 'answer' ? (
                 <>
-                  <CollapsibleAnswer content={step.content} />
-                  {trigger && (
+                  {trigger && !isAnswerExpanded ? (
+                    <div className="text-base leading-relaxed text-text-secondary font-medium italic">
+                      "{trigger.content}"
+                    </div>
+                  ) : (
+                    <CollapsibleAnswer content={step.content} />
+                  )}
+                  <div className="flex items-center gap-3 mt-2">
+                    <button
+                      onClick={() => toggleAnswer(idx)}
+                      className="text-sm text-emerald-600 hover:text-emerald-700 font-bold transition-colors"
+                    >
+                      {isAnswerExpanded ? '收起回答' : '展开回答'}
+                    </button>
+                  </div>
+                  {trigger && isAnswerExpanded && (
                     <div className="mt-4 p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/50 flex items-start gap-3 text-sm">
                       <span className="shrink-0 px-2 py-0.5 rounded-full bg-amber-600 text-white text-[10px] font-bold uppercase tracking-wider">触发追问</span>
                       <span className="text-amber-800 dark:text-amber-200 leading-relaxed font-medium">"{trigger.content}"</span>
@@ -225,6 +250,22 @@ const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({
 };
 
 // --- Helpers ---
+
+function formatTimeString(timeStr: string): string {
+  const convertSeconds = (s: number): string => {
+    const hrs = Math.floor(s / 3600);
+    const mins = Math.floor((s % 3600) / 60);
+    const secs = Math.floor(s % 60);
+    return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+  const parts = timeStr.split('~').map(p => p.trim());
+  const converted = parts.map(p => {
+    const match = p.match(/([\d.]+)\s*s/);
+    if (!match) return p;
+    return convertSeconds(parseFloat(match[1]));
+  });
+  return converted.join(' ~ ');
+}
 
 function getQuestionBadgeColor(type: string): "blue" | "green" | "amber" | "red" | "zinc" {
   switch (type) {
@@ -505,36 +546,21 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
               <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
                 {/* Left: Question table */}
                 <Card className="xl:col-span-7 xl:max-h-[800px] flex flex-col">
-                  <div className="overflow-x-auto flex-1">
-                    <table className="w-full text-sm text-left">
-                      <thead className="text-[10px] text-text-secondary uppercase tracking-widest bg-bg-base border-b border-border-main">
-                        <tr>
-                          <th className="px-8 py-4 font-bold">编号</th>
-                          <th className="px-8 py-4 font-bold">问题文本</th>
-                          <th className="px-8 py-4 font-bold">类型</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border-main">
-                        {filteredQuestions.map((q, i) => (
-                          <tr
-                            key={i}
-                            onClick={() => q.timestamp && handleQuestionClick(q.timestamp)}
-                            className={`transition-all duration-200 ${q.timestamp ? 'cursor-pointer hover:bg-emerald-50/40 dark:hover:bg-emerald-900/10' : 'hover:bg-bg-base/40'}`}
-                          >
-                            <td className="px-8 py-6 text-text-primary whitespace-nowrap">
-                              <div className="flex items-center gap-3 font-bold">
-                                {q.id}
-                                {q.timestamp && <span className="text-[10px] font-mono text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">{q.timestamp}</span>}
-                              </div>
-                            </td>
-                            <td className="px-8 py-6 text-text-primary font-medium leading-relaxed">{q.text}</td>
-                            <td className="px-8 py-6 text-text-primary">
-                              <Badge color={getQuestionBadgeColor(q.type)}>{q.type}</Badge>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="overflow-y-auto flex-1 divide-y divide-border-main">
+                    {filteredQuestions.map((q, i) => (
+                      <div
+                        key={i}
+                        onClick={() => q.timestamp && handleQuestionClick(q.timestamp)}
+                        className={`flex items-center gap-4 px-6 py-4 transition-all duration-200 ${q.timestamp ? 'cursor-pointer hover:bg-emerald-50/40 dark:hover:bg-emerald-900/10' : 'hover:bg-bg-base/40'}`}
+                      >
+                        <span className="shrink-0 w-12 text-center px-2 py-1 rounded-full bg-emerald-600 text-white text-xs font-bold">{q.id}</span>
+                        <Badge color={getQuestionBadgeColor(q.type)}>{q.type}</Badge>
+                        <span className="flex-1 text-sm text-text-primary font-medium leading-relaxed truncate">
+                          {q.text}
+                          {q.timestamp && <span className="ml-2 text-[10px] font-mono text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">{formatTimeString(q.timestamp)}</span>}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                   <div className="bg-bg-base p-6 border-t border-border-main flex flex-wrap gap-6 text-[11px] font-bold uppercase tracking-widest text-text-secondary">
                     <span className="text-text-primary">数据统计</span>

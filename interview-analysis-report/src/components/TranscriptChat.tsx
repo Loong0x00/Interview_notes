@@ -11,12 +11,29 @@ interface TranscriptChatProps {
 
 function formatTime(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
-  const min = Math.floor(totalSec / 60);
+  const hrs = Math.floor(totalSec / 3600);
+  const min = Math.floor((totalSec % 3600) / 60);
   const sec = totalSec % 60;
-  return `${min}:${sec.toString().padStart(2, '0')}`;
+  return `${hrs.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
 }
 
 export default function TranscriptChat({ segments, interviewerSpeaker, activeSegmentIndex, loading, containerRef }: TranscriptChatProps) {
+  const mergedSegments = React.useMemo(() => {
+    if (segments.length === 0) return [];
+    const merged: (TranscriptSegment & { originalIndices: number[] })[] = [];
+    
+    segments.forEach((seg, idx) => {
+      const last = merged[merged.length - 1];
+      if (last && last.speaker === seg.speaker) {
+        last.text += '\n' + seg.text;
+        last.originalIndices.push(idx);
+      } else {
+        merged.push({ ...seg, originalIndices: [idx] });
+      }
+    });
+    return merged;
+  }, [segments]);
+
   if (loading) {
     return <div className="flex items-center justify-center h-96 text-text-secondary text-sm font-bold uppercase tracking-widest">加载转写中...</div>;
   }
@@ -26,15 +43,15 @@ export default function TranscriptChat({ segments, interviewerSpeaker, activeSeg
 
   return (
     <div ref={containerRef} className="overflow-y-auto px-6 py-6 space-y-6 scroll-smooth bg-bg-base flex-1 min-h-0">
-      {segments.map((seg, idx) => {
+      {mergedSegments.map((seg, idx) => {
         const isInterviewer = seg.speaker === interviewerSpeaker;
-        const isActive = idx === activeSegmentIndex;
+        const isActive = activeSegmentIndex !== null && seg.originalIndices.includes(activeSegmentIndex);
         const label = isInterviewer ? '面试官' : '候选人';
 
         return (
           <div
             key={idx}
-            id={`transcript-seg-${idx}`}
+            id={`transcript-seg-${seg.originalIndices[0]}`}
             className={`flex items-start gap-3 ${isInterviewer ? 'flex-row' : 'flex-row-reverse'}`}
           >
             {/* Avatar */}
@@ -48,7 +65,7 @@ export default function TranscriptChat({ segments, interviewerSpeaker, activeSeg
                 {label} · {formatTime(seg.start_ms)}
               </span>
               <div className={`
-                relative px-5 py-3.5 text-sm leading-relaxed transition-all duration-300 bento-shadow
+                relative px-5 py-3.5 text-sm leading-relaxed transition-all duration-300 bento-shadow whitespace-pre-wrap
                 ${isInterviewer
                   ? 'bg-bg-surface border border-border-main text-text-primary rounded-2xl rounded-tl-sm'
                   : 'bg-emerald-600 text-white rounded-2xl rounded-tr-sm shadow-emerald-500/20'
