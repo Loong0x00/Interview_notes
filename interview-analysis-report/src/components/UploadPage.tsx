@@ -171,10 +171,6 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
     setMode(newMode);
     setFile(null);
     setJob(null);
-    setJdText("");
-    setCvFile(null);
-    setInterviewType("");
-    setShowContext(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -278,26 +274,6 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
               />
             </div>
 
-            {/* Interview Type */}
-            <div className="bg-bg-surface rounded-3xl bento-shadow border border-border-main p-8 space-y-4">
-              <div>
-                <h2 className="text-lg font-bold text-text-primary">面试轮次</h2>
-                <p className="text-sm text-text-secondary mt-1">选填，用于分类筛选</p>
-              </div>
-              <select
-                value={interviewType}
-                onChange={(e) => setInterviewType(e.target.value)}
-                className="w-full px-5 py-3 bg-bg-base border border-border-main rounded-2xl text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all appearance-none cursor-pointer"
-              >
-                <option value="">未指定</option>
-                <option value="一面">一面</option>
-                <option value="二面">二面</option>
-                <option value="三面">三面</option>
-                <option value="HR面">HR面</option>
-                <option value="终面">终面</option>
-              </select>
-            </div>
-
             {/* CV Upload */}
             <div className="bg-bg-surface rounded-3xl bento-shadow border border-border-main p-8 space-y-4">
               <div>
@@ -311,7 +287,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                 <input
                   ref={cvInputRef}
                   type="file"
-                  accept=".pdf,.docx"
+                  accept=".pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   onChange={(e) => setCvFile(e.target.files?.[0] || null)}
                   className="hidden"
                 />
@@ -530,6 +506,25 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
               </div>
             </div>
 
+            {/* Interview Type */}
+            {!job && (
+              <div className="flex items-center justify-center gap-3">
+                <span className="text-sm font-bold text-text-secondary">面试轮次</span>
+                <select
+                  value={interviewType}
+                  onChange={(e) => setInterviewType(e.target.value)}
+                  className="px-4 py-2 bg-bg-base border border-border-main rounded-full text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all appearance-none cursor-pointer"
+                >
+                  <option value="">未指定</option>
+                  <option value="一面">一面</option>
+                  <option value="二面">二面</option>
+                  <option value="三面">三面</option>
+                  <option value="HR面">HR面</option>
+                  <option value="终面">终面</option>
+                </select>
+              </div>
+            )}
+
             {/* Upload Button */}
             {file && !job && (
               <div className="flex justify-center pt-4">
@@ -557,6 +552,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
           </div>
         </div>
       </div>
+      <footer className="text-xs text-text-secondary text-center py-6">&copy; 2026 Loong0x00 &amp; AmandaWWW</footer>
     </div>
   );
 }

@@ -281,6 +281,53 @@ export function getReportInterviewType(reportName: string): string | null {
   return row?.interview_type ?? null;
 }
 
+// ── Report upload_time / original_filename / display_name columns (migration) ──
+
+try {
+  db.exec("ALTER TABLE reports ADD COLUMN upload_time TEXT DEFAULT NULL");
+} catch {
+  // Column already exists
+}
+
+try {
+  db.exec("ALTER TABLE reports ADD COLUMN original_filename TEXT DEFAULT NULL");
+} catch {
+  // Column already exists
+}
+
+try {
+  db.exec("ALTER TABLE reports ADD COLUMN display_name TEXT DEFAULT NULL");
+} catch {
+  // Column already exists
+}
+
+export function setReportUploadTime(reportName: string, userId: number, uploadTime: string): void {
+  db.prepare("UPDATE reports SET upload_time = ? WHERE user_id = ? AND name = ?").run(uploadTime, userId, reportName);
+}
+
+export function setReportOriginalFilename(reportName: string, userId: number, filename: string): void {
+  db.prepare("UPDATE reports SET original_filename = ? WHERE user_id = ? AND name = ?").run(filename, userId, reportName);
+}
+
+export function getReportUploadTime(reportName: string): string | null {
+  const row = db.prepare("SELECT upload_time FROM reports WHERE name = ?").get(reportName) as { upload_time: string | null } | undefined;
+  return row?.upload_time ?? null;
+}
+
+export function getReportOriginalFilename(reportName: string): string | null {
+  const row = db.prepare("SELECT original_filename FROM reports WHERE name = ?").get(reportName) as { original_filename: string | null } | undefined;
+  return row?.original_filename ?? null;
+}
+
+export function setReportDisplayName(reportName: string, userId: number, displayName: string): void {
+  db.prepare("UPDATE reports SET display_name = ? WHERE user_id = ? AND name = ?").run(displayName, userId, reportName);
+}
+
+export function getReportDisplayName(reportName: string): string | null {
+  const row = db.prepare("SELECT display_name FROM reports WHERE name = ?").get(reportName) as { display_name: string | null } | undefined;
+  return row?.display_name ?? null;
+}
+
 // ── Report tags helpers ──
 
 export function addReportTag(reportName: string, tag: string): void {

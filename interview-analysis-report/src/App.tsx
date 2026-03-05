@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Sun, Moon, X, Plus, Tag } from 'lucide-react';
+import { Sun, Moon, X, Plus, Tag, Pencil, Check } from 'lucide-react';
 import Report from './components/Report';
 import UploadPage from './components/UploadPage';
 import LoginPage from './components/LoginPage';
@@ -36,7 +36,11 @@ function AppInner() {
   const [allTags, setAllTags] = useState<string[]>([]);
   const [addingTagFor, setAddingTagFor] = useState<string | null>(null);
   const [newTagText, setNewTagText] = useState('');
+  const [sortMode, setSortMode] = useState<'time-desc' | 'time-asc' | 'name-asc' | 'name-desc'>('time-desc');
+  const [editingName, setEditingName] = useState<string | null>(null);
+  const [editingDisplayName, setEditingDisplayName] = useState('');
   const tagInputRef = useRef<HTMLInputElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   const handleAuthError = (res: Response) => {
     if (res.status === 401) {
@@ -131,9 +135,26 @@ function AppInner() {
     loadReport(reportName);
   };
 
+  const saveDisplayName = (reportName: string, displayName: string) => {
+    authFetch(`/api/reports/${encodeURIComponent(reportName)}/display-name`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName }),
+    }).then(r => {
+      if (r.ok) {
+        setReports(prev => prev.map(r => r.name === reportName ? { ...r, displayName } : r));
+      }
+    }).catch(() => {});
+    setEditingName(null);
+  };
+
   useEffect(() => {
     if (addingTagFor && tagInputRef.current) tagInputRef.current.focus();
   }, [addingTagFor]);
+
+  useEffect(() => {
+    if (editingName && editInputRef.current) editInputRef.current.focus();
+  }, [editingName]);
 
   // Auth loading state
   if (isLoading) {
@@ -201,7 +222,20 @@ function AppInner() {
   const filteredReports = [...reports]
     .filter(r => !filterType || r.interviewType === filterType)
     .filter(r => !filterTag || r.tags.includes(filterTag))
-    .sort((a, b) => b.date.localeCompare(a.date));
+    .sort((a, b) => {
+      switch (sortMode) {
+        case 'time-desc':
+          return (b.uploadTime || b.date).localeCompare(a.uploadTime || a.date);
+        case 'time-asc':
+          return (a.uploadTime || a.date).localeCompare(b.uploadTime || b.date);
+        case 'name-asc':
+          return (a.displayName || a.position).localeCompare(b.displayName || b.position);
+        case 'name-desc':
+          return (b.displayName || b.position).localeCompare(a.displayName || a.position);
+        default:
+          return 0;
+      }
+    });
 
   // Report list view
   return (
@@ -267,6 +301,25 @@ function AppInner() {
           </div>
         )}
 
+        {/* Sort buttons */}
+        {reports.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mb-6">
+            <span className="text-xs font-bold text-text-secondary uppercase tracking-wider mr-1">排序</span>
+            {([
+              ['time-desc', '上传时间 ↓'],
+              ['time-asc', '上传时间 ↑'],
+              ['name-asc', '名称 A-Z'],
+              ['name-desc', '名称 Z-A'],
+            ] as const).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setSortMode(key)}
+                className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${sortMode === key ? 'bg-emerald-600 text-white shadow-sm' : 'bg-bg-surface text-text-secondary border border-border-main hover:border-emerald-400'}`}
+              >{label}</button>
+            ))}
+          </div>
+        )}
+
         {reports.length === 0 ? (
           <div className="text-center py-24 bg-bg-surface rounded-3xl bento-shadow border border-border-main">
             <p className="text-text-secondary text-lg mb-6">暂无报告，开始您的第一次分析吧</p>
@@ -286,10 +339,42 @@ function AppInner() {
               >
                 <div className="flex justify-between items-start cursor-pointer" onClick={() => loadReport(report.name)}>
                   <div>
-                    <h2 className="text-xl font-bold text-text-primary group-hover:text-emerald-600 transition-colors">{report.position}</h2>
+                    <div className="flex items-center gap-2">
+                      {editingName === report.name ? (
+                        <form
+                          className="inline-flex items-center gap-2"
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            saveDisplayName(report.name, editingDisplayName);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            ref={editInputRef}
+                            value={editingDisplayName}
+                            onChange={(e) => setEditingDisplayName(e.target.value)}
+                            onBlur={() => saveDisplayName(report.name, editingDisplayName)}
+                            onKeyDown={(e) => { if (e.key === 'Escape') setEditingName(null); }}
+                            className="text-xl font-bold bg-bg-base border border-border-main rounded-lg px-2 py-1 focus:outline-none focus:border-emerald-500 text-text-primary"
+                          />
+                          <button type="submit" className="p-1 text-emerald-600 hover:text-emerald-700"><Check className="w-4 h-4" /></button>
+                        </form>
+                      ) : (
+                        <>
+                          <h2 className="text-xl font-bold text-text-primary group-hover:text-emerald-600 transition-colors">{report.displayName || report.position}</h2>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setEditingName(report.name); setEditingDisplayName(report.displayName || report.position); }}
+                            className="p-1 text-text-secondary hover:text-emerald-600 transition-colors opacity-0 group-hover:opacity-100"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                     <p className="text-sm text-text-secondary mt-2 flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      {report.date}
+                      {report.uploadTime ? new Date(report.uploadTime).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-') : report.date}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -352,6 +437,7 @@ function AppInner() {
             ))}
           </div>
         )}
+        <footer className="text-xs text-text-secondary text-center py-6">&copy; 2026 Loong0x00 &amp; AmandaWWW</footer>
       </div>
     </div>
   );

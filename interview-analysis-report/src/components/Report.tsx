@@ -680,9 +680,9 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                       >
                         <span className="shrink-0 w-12 text-center px-2 py-1 rounded-full bg-emerald-600 text-white text-xs font-bold">{q.id}</span>
                         <Badge color={getQuestionBadgeColor(q.type)}>{q.type}</Badge>
-                        <span className="flex-1 text-sm text-text-primary font-medium leading-relaxed truncate">
+                        <span className="flex-1 text-sm text-text-primary font-medium leading-relaxed">
                           {q.text}
-                          {q.timestamp && <span className="ml-2 text-[10px] font-mono text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">{formatTimeString(q.timestamp)}</span>}
+                          {q.timestamp && <span className="ml-2 text-[10px] font-mono text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full whitespace-nowrap">{formatTimeString(q.timestamp)}</span>}
                         </span>
                       </div>
                     ))}
@@ -816,6 +816,10 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
             <footer className="text-center text-text-secondary text-sm font-medium py-16 border-t border-border-main mt-16">
               <p>本报告由 AI 分析层（{meta.model}）依据高阶分析流程生成</p>
               <p className="mt-2 text-[10px] font-bold uppercase tracking-widest opacity-60">原始数据：{meta.source}</p>
+              {reportName && (
+                <p className="mt-4 text-xs text-text-secondary">数据来源：{reportName}</p>
+              )}
+              <p className="mt-4 text-xs text-text-secondary">&copy; 2026 Loong0x00 &amp; AmandaWWW</p>
             </footer>
 
           </main>

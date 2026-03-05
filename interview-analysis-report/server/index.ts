@@ -15,7 +15,7 @@ import jwt from "jsonwebtoken";
 import { convertMdToJson } from "./convert.js";
 import { startPipeline, startTranscriptPipeline, getJob, getAllJobs, addJobListener, restoreJobs, type PipelineContext } from "./pipeline.js";
 import authRouter, { requireAuth } from "./auth.js";
-import { getReportsByUser, userOwnsReport, getReportContext, setReportInterviewType, getReportInterviewType, getReportTags, addReportTag, removeReportTag, getAllTagsByUser } from "./db.js";
+import { getReportsByUser, userOwnsReport, getReportContext, setReportInterviewType, getReportInterviewType, getReportTags, addReportTag, removeReportTag, getAllTagsByUser, getReportUploadTime, getReportOriginalFilename, getReportDisplayName, setReportDisplayName } from "./db.js";
 import { extractCVText } from "./parseCV.js";
 
 const PORT = 8000;
@@ -108,6 +108,9 @@ interface ReportListItem {
   date: string;
   interviewType?: string;
   tags: string[];
+  uploadTime?: string;
+  originalFilename?: string;
+  displayName?: string;
 }
 
 function findReports(userId: number): ReportListItem[] {
@@ -121,15 +124,24 @@ function findReports(userId: number): ReportListItem[] {
       const data = JSON.parse(raw);
       const meta = data.meta || {};
       const interviewType = getReportInterviewType(name);
+      const uploadTime = getReportUploadTime(name);
+      const originalFilename = getReportOriginalFilename(name);
+      const displayName = getReportDisplayName(name);
       return {
         name,
         position: meta.position || name,
         date: meta.date || "",
         interviewType: interviewType || undefined,
         tags,
+        uploadTime: uploadTime || undefined,
+        originalFilename: originalFilename || undefined,
+        displayName: displayName || undefined,
       };
     } catch {
-      return { name, position: name, date: "", tags };
+      const uploadTime = getReportUploadTime(name);
+      const originalFilename = getReportOriginalFilename(name);
+      const displayName = getReportDisplayName(name);
+      return { name, position: name, date: "", tags, uploadTime: uploadTime || undefined, originalFilename: originalFilename || undefined, displayName: displayName || undefined };
     }
   });
 }
@@ -221,6 +233,19 @@ app.put("/api/reports/:name/type", requireAuth, (req, res) => {
   const { interviewType } = req.body;
   if (!interviewType || typeof interviewType !== "string") { res.status(400).json({ error: "Missing interviewType" }); return; }
   setReportInterviewType(name, req.user!.userId, interviewType.trim());
+  res.json({ ok: true });
+});
+
+// PUT /api/reports/:name/display-name - set display name
+app.put("/api/reports/:name/display-name", requireAuth, (req, res) => {
+  const name = sanitizeName(req.params.name);
+  if (!name) { res.status(400).json({ error: "Invalid report name" }); return; }
+  if (!userOwnsReport(req.user!.userId, name)) { res.status(403).json({ error: "Forbidden" }); return; }
+  const { displayName } = req.body;
+  if (!displayName || typeof displayName !== "string") { res.status(400).json({ error: "Missing displayName" }); return; }
+  const trimmed = displayName.trim().slice(0, 100);
+  if (trimmed.length === 0) { res.status(400).json({ error: "displayName cannot be empty" }); return; }
+  setReportDisplayName(name, req.user!.userId, trimmed);
   res.json({ ok: true });
 });
 

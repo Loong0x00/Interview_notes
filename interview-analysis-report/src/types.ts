@@ -152,6 +152,9 @@ export interface ReportListItem {
   date: string;
   interviewType?: string;
   tags: string[];
+  uploadTime?: string;
+  originalFilename?: string;
+  displayName?: string;
 }
 
 export interface ApiReportListResponse {

@@ -4,7 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { transcribe, type TranscriptSegment } from "./transcribe.js";
 import { formatTranscript, analyze } from "./analyze.js";
-import { registerReport, saveJob, getPersistedJob, getActiveJobs, deleteOldJobs, saveReportContext } from "./db.js";
+import { registerReport, saveJob, getPersistedJob, getActiveJobs, deleteOldJobs, saveReportContext, setReportUploadTime, setReportOriginalFilename } from "./db.js";
 import { parseTranscriptFile } from "./parseTranscript.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -125,6 +125,8 @@ async function runAnalysis(
   // Register report ownership
   if (job.userId) {
     registerReport(job.userId, baseName);
+    setReportUploadTime(baseName, job.userId, new Date(job.createdAt).toISOString());
+    setReportOriginalFilename(baseName, job.userId, job.fileName);
   }
 
   // Done
