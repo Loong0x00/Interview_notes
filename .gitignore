@@ -22,5 +22,24 @@ __pycache__/
 # 项目说明（仅本地）
 CLAUDE.md
 
+# 环境变量
+.env
+
 # 系统
 .DS_Store
+
+# 音频文件
+*.m4a
+*.mp3
+*.wav
+*.flac
+
+# 分析产物（本地生成）
+*_analysis.md
+*_analysis_data.json
+*_transcript.json
+
+# Office 文件
+*.docx
+*.doc
+*.pdf
