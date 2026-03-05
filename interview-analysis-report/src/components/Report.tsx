@@ -13,7 +13,6 @@ import {
   MessageCircle,
   ArrowLeft,
   Briefcase,
-  BarChart3,
 } from 'lucide-react';
 import type { AnalysisReport, DialogueStep, TranscriptSegment } from '../types';
 import TranscriptChat from './TranscriptChat';
@@ -381,12 +380,11 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
               {(() => {
                 const chineseNumbers = ['一', '二', '三', '四', '五', '六', '七', '八'];
                 const navItems = [
-                  data.positionSummary ? { id: 'position', label: '岗位摘要', icon: Briefcase } : null,
+                  (data.positionSummary || data.fitAnalysis) ? { id: 'position', label: '岗位摘要', icon: Briefcase } : null,
                   { id: 'summary', label: '表现摘要', icon: CheckCircle2 },
                   { id: 'questions', label: '问题列表', icon: MessageSquare },
                   { id: 'chains', label: '对话链分析', icon: TrendingUp },
                   { id: 'focus', label: '关注图谱', icon: Target },
-                  data.fitAnalysis ? { id: 'fit', label: '契合度分析', icon: BarChart3 } : null,
                 ].filter(Boolean) as { id: string; label: string; icon: React.FC<any> }[];
                 return navItems.map((item, idx) => (
                   <a
@@ -410,66 +408,111 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
               const chineseNumbers = ['一', '二', '三', '四', '五', '六', '七', '八'];
               let sectionIdx = 0;
               const nextNum = () => chineseNumbers[sectionIdx++];
-              const positionNum = data.positionSummary ? nextNum() : '';
+              const positionNum = (data.positionSummary || data.fitAnalysis) ? nextNum() : '';
               const summaryNum = nextNum();
               const questionsNum = nextNum();
               const chainsNum = nextNum();
               const focusNum = nextNum();
-              const fitNum = data.fitAnalysis ? nextNum() : '';
 
               return (<>
 
-            {/* Position Summary (conditional) */}
-            {data.positionSummary && (
+            {/* Position Summary + Fit Analysis (merged) */}
+            {(data.positionSummary || data.fitAnalysis) && (
               <Section id="position" title={`${positionNum}、岗位摘要`} icon={<Briefcase size={24} />}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <Card>
-                    <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 font-bold text-text-primary">
-                      核心职责与要求
-                    </div>
-                    <div className="p-8 space-y-5">
-                      {data.positionSummary.responsibilities.map((r, i) => (
-                        <div key={i} className="flex gap-4">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                          <span className="text-base text-text-primary font-medium">{r}</span>
-                        </div>
-                      ))}
-                      {data.positionSummary.requirements.length > 0 && (
-                        <div className="pt-4 border-t border-border-main space-y-5">
-                          {data.positionSummary.requirements.map((r, i) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left Card — 岗位画像 */}
+                  {data.positionSummary && (
+                    <div className={`bg-bg-surface rounded-2xl bento-shadow border border-border-main p-6 space-y-6 ${!data.fitAnalysis ? 'md:col-span-2' : ''}`}>
+                      <h3 className="text-lg font-bold text-text-primary">岗位画像</h3>
+
+                      {/* JD 核心职责 */}
+                      <div className="space-y-3">
+                        <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">JD 核心职责</span>
+                        {data.positionSummary.responsibilities.map((r, i) => (
+                          <div key={i} className="flex gap-4">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                            <span className="text-base text-text-primary font-medium">{r}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* 面试官口述实际工作 */}
+                      {data.positionSummary.interviewActualWork && data.positionSummary.interviewActualWork.length > 0 && (
+                        <div className="space-y-3">
+                          <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">面试官口述实际工作</span>
+                          {data.positionSummary.interviewActualWork.map((w, i) => (
                             <div key={i} className="flex gap-4">
-                              <div className="w-2 h-2 rounded-full bg-amber-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
-                              <span className="text-base text-text-primary font-medium">{r}</span>
+                              <div className="w-2 h-2 rounded-full bg-blue-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.4)]" />
+                              <span className="text-base text-text-primary font-medium">{w}</span>
                             </div>
                           ))}
                         </div>
                       )}
-                    </div>
-                  </Card>
-                  <Card>
-                    <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 font-bold text-text-primary">
-                      工作环境
-                    </div>
-                    <div className="p-8 space-y-6">
-                      <div className="text-base">
-                        <span className="font-bold text-text-secondary">工作强度：</span>
-                        <span className="text-text-primary font-medium">{data.positionSummary.workIntensity}</span>
-                      </div>
-                      <div className="text-base">
-                        <span className="font-bold text-text-secondary">团队文化：</span>
-                        <span className="text-text-primary font-medium">{data.positionSummary.teamCulture}</span>
-                      </div>
+
+                      {/* 冲突高亮 */}
+                      {data.positionSummary.conflictsHighlighted && data.positionSummary.conflictsHighlighted.length > 0 &&
+                        data.positionSummary.conflictsHighlighted.some(c => c !== '无明显冲突') && (
+                        <div className="space-y-3">
+                          {data.positionSummary.conflictsHighlighted
+                            .filter(c => c !== '无明显冲突')
+                            .map((conflict, i) => (
+                              <div key={i} className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start gap-3">
+                                <AlertTriangle size={18} className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                                <span className="text-base text-red-800 dark:text-red-200 font-medium">{conflict}</span>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+
+                      {/* 隐藏要求 */}
+                      {data.positionSummary.hiddenRequirements && data.positionSummary.hiddenRequirements.length > 0 && (
+                        <div className="space-y-3">
+                          <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">隐藏要求</span>
+                          {data.positionSummary.hiddenRequirements.map((req, i) => (
+                            <div key={i} className="flex gap-4">
+                              <div className="w-2 h-2 rounded-full bg-amber-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+                              <span className="text-base text-text-primary font-medium">{req}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* KPI 与目标 */}
                       {data.positionSummary.keyKPIs.length > 0 && (
                         <div className="space-y-3">
-                          <span className="text-base font-bold text-text-secondary">关键 KPI：</span>
+                          <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">关键 KPI</span>
                           {data.positionSummary.keyKPIs.map((kpi, i) => (
-                            <div key={i} className="flex gap-4 ml-3">
+                            <div key={i} className="flex gap-4">
                               <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2.5 shrink-0" />
                               <span className="text-base text-text-primary font-medium">{kpi}</span>
                             </div>
                           ))}
                         </div>
                       )}
+
+                      {/* 工作强度、团队氛围、硬性要求 */}
+                      <div className="pt-4 border-t border-border-main space-y-4">
+                        <div className="text-base">
+                          <span className="font-bold text-text-secondary">工作强度：</span>
+                          <span className="text-text-primary font-medium">{data.positionSummary.workIntensity}</span>
+                        </div>
+                        <div className="text-base">
+                          <span className="font-bold text-text-secondary">团队文化：</span>
+                          <span className="text-text-primary font-medium">{data.positionSummary.teamCulture}</span>
+                        </div>
+                        {data.positionSummary.requirements.length > 0 && (
+                          <div className="space-y-3">
+                            <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">硬性要求</span>
+                            {data.positionSummary.requirements.map((r, i) => (
+                              <div key={i} className="flex gap-4">
+                                <div className="w-2 h-2 rounded-full bg-amber-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+                                <span className="text-base text-text-primary font-medium">{r}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
                       {data.positionSummary.highlights && (
                         <div className="text-base bg-emerald-50 dark:bg-emerald-900/10 p-5 rounded-2xl border border-emerald-100 dark:border-emerald-800/50">
                           <span className="font-bold text-emerald-700 dark:text-emerald-300">亮点：</span>
@@ -477,7 +520,89 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                         </div>
                       )}
                     </div>
-                  </Card>
+                  )}
+
+                  {/* Right Card — 契合度 */}
+                  {data.fitAnalysis && (
+                    <div className={`bg-bg-surface rounded-2xl bento-shadow border border-border-main p-6 space-y-6 ${!data.positionSummary ? 'md:col-span-2' : ''}`}>
+                      <h3 className="text-lg font-bold text-text-primary">契合度</h3>
+
+                      {/* Overall Score + Recommendation */}
+                      <div className="text-center py-4">
+                        <div className={`text-6xl font-black mb-2 ${
+                          data.fitAnalysis.overallScore >= 80 ? 'text-emerald-600' :
+                          data.fitAnalysis.overallScore >= 60 ? 'text-amber-500' :
+                          'text-red-600'
+                        }`}>
+                          {data.fitAnalysis.overallScore}
+                        </div>
+                        <div className="text-xs font-bold text-text-secondary uppercase tracking-widest mb-3">综合契合度评分</div>
+                        <p className="text-base text-text-primary leading-relaxed font-bold">
+                          {data.fitAnalysis.recommendation}
+                        </p>
+                      </div>
+
+                      {/* Hard/Soft Skill Match + Experience Relevance */}
+                      {(data.fitAnalysis.hardSkillMatch || data.fitAnalysis.softSkillMatch || data.fitAnalysis.experienceRelevance) && (
+                        <div className="space-y-4 pt-4 border-t border-border-main">
+                          {data.fitAnalysis.hardSkillMatch && (
+                            <div className="text-base">
+                              <span className="font-bold text-text-secondary">硬技能匹配：</span>
+                              <span className="text-text-primary font-medium">{data.fitAnalysis.hardSkillMatch}</span>
+                            </div>
+                          )}
+                          {data.fitAnalysis.softSkillMatch && (
+                            <div className="text-base">
+                              <span className="font-bold text-text-secondary">软技能匹配：</span>
+                              <span className="text-text-primary font-medium">{data.fitAnalysis.softSkillMatch}</span>
+                            </div>
+                          )}
+                          {data.fitAnalysis.experienceRelevance && (
+                            <div className="text-base">
+                              <span className="font-bold text-text-secondary">经验相关度：</span>
+                              <span className="text-text-primary font-medium">{data.fitAnalysis.experienceRelevance}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Dimensions Table */}
+                      <div className="overflow-x-auto rounded-xl border border-border-main">
+                        <Table
+                          headers={['维度', 'JD 要求', '候选人证据', '得分', '评价']}
+                          rows={data.fitAnalysis.dimensions.map(d => [
+                            d.dimension,
+                            d.jdRequirement,
+                            d.candidateEvidence,
+                            <Badge color={d.score >= 80 ? 'green' : d.score >= 60 ? 'amber' : 'red'}>{d.score}</Badge>,
+                            d.comment,
+                          ])}
+                        />
+                      </div>
+
+                      {/* Strengths & Gaps */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-3">
+                          <span className="text-sm font-bold text-emerald-600 uppercase tracking-wider">优势匹配</span>
+                          {data.fitAnalysis.strengths.map((s, i) => (
+                            <div key={i} className="flex gap-3">
+                              <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                              <span className="text-sm text-text-primary font-bold">{s}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="space-y-3">
+                          <span className="text-sm font-bold text-amber-600 uppercase tracking-wider">待提升</span>
+                          {data.fitAnalysis.gaps.map((g, i) => (
+                            <div key={i} className="flex gap-3">
+                              <div className="w-2 h-2 rounded-full bg-amber-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+                              <span className="text-sm text-text-primary font-bold">{g}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </Section>
             )}
@@ -684,71 +809,6 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
               </div>
             </Section>
 
-            {/* Fit Analysis (conditional) */}
-            {data.fitAnalysis && (
-              <Section id="fit" title={`${fitNum}、契合度分析`} icon={<BarChart3 size={24} />}>
-                {/* Overall Score */}
-                <Card className="mb-8">
-                  <div className="p-10 flex flex-col items-center text-center">
-                    <div className={`text-7xl font-black mb-4 ${
-                      data.fitAnalysis.overallScore >= 80 ? 'text-emerald-600' :
-                      data.fitAnalysis.overallScore >= 60 ? 'text-amber-500' :
-                      'text-red-600'
-                    }`}>
-                      {data.fitAnalysis.overallScore}
-                    </div>
-                    <div className="text-xs font-bold text-text-secondary uppercase tracking-widest mb-6">综合契合度评分</div>
-                    <p className="text-lg text-text-primary max-w-2xl leading-relaxed font-bold">
-                      {data.fitAnalysis.recommendation}
-                    </p>
-                  </div>
-                </Card>
-
-                {/* Dimensions Table */}
-                <Card className="mb-8">
-                  <Table
-                    headers={['维度', 'JD 要求', '候选人证据', '得分', '评价']}
-                    rows={data.fitAnalysis.dimensions.map(d => [
-                      d.dimension,
-                      d.jdRequirement,
-                      d.candidateEvidence,
-                      <Badge color={d.score >= 80 ? 'green' : d.score >= 60 ? 'amber' : 'red'}>{d.score}</Badge>,
-                      d.comment,
-                    ])}
-                  />
-                </Card>
-
-                {/* Strengths & Gaps */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <Card>
-                    <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 font-bold text-text-primary">
-                      优势匹配
-                    </div>
-                    <div className="p-8 space-y-5">
-                      {data.fitAnalysis.strengths.map((s, i) => (
-                        <div key={i} className="flex gap-4">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                          <span className="text-base text-text-primary font-bold">{s}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-                  <Card>
-                    <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 font-bold text-text-primary">
-                      待提升
-                    </div>
-                    <div className="p-8 space-y-5">
-                      {data.fitAnalysis.gaps.map((g, i) => (
-                        <div key={i} className="flex gap-4">
-                          <div className="w-2 h-2 rounded-full bg-amber-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
-                          <span className="text-base text-text-primary font-bold">{g}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-                </div>
-              </Section>
-            )}
 
               </>);
             })()}
