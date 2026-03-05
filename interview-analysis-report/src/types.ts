@@ -150,6 +150,8 @@ export interface ReportListItem {
   name: string;        // file base name, e.g. "小米创新AI产品经理"
   position: string;
   date: string;
+  interviewType?: string;
+  tags: string[];
 }
 
 export interface ApiReportListResponse {

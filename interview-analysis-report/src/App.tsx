@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Sun, Moon } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Sun, Moon, X, Plus, Tag } from 'lucide-react';
 import Report from './components/Report';
 import UploadPage from './components/UploadPage';
 import LoginPage from './components/LoginPage';
@@ -31,6 +31,12 @@ function AppInner() {
   const [selectedReportName, setSelectedReportName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<string>('');
+  const [filterTag, setFilterTag] = useState<string>('');
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const [addingTagFor, setAddingTagFor] = useState<string | null>(null);
+  const [newTagText, setNewTagText] = useState('');
+  const tagInputRef = useRef<HTMLInputElement>(null);
 
   const handleAuthError = (res: Response) => {
     if (res.status === 401) {
@@ -61,6 +67,7 @@ function AppInner() {
   useEffect(() => {
     if (isAuthenticated) {
       fetchReports();
+      fetchTags();
       // Auto-resume upload page if there's an active pipeline job
       authFetch('/api/pipeline/jobs')
         .then(res => res.json())
@@ -94,10 +101,39 @@ function AppInner() {
       });
   };
 
+  const fetchTags = () => {
+    authFetch('/api/tags').then(r => r.json()).then(d => setAllTags(d.tags || [])).catch(() => {});
+  };
+
+  const addTag = (reportName: string, tag: string) => {
+    authFetch(`/api/reports/${encodeURIComponent(reportName)}/tags`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tag }),
+    }).then(r => r.json()).then(d => {
+      setReports(prev => prev.map(r => r.name === reportName ? { ...r, tags: d.tags } : r));
+      fetchTags();
+    }).catch(() => {});
+  };
+
+  const removeTag = (reportName: string, tag: string) => {
+    authFetch(`/api/reports/${encodeURIComponent(reportName)}/tags/${encodeURIComponent(tag)}`, {
+      method: 'DELETE',
+    }).then(r => r.json()).then(d => {
+      setReports(prev => prev.map(r => r.name === reportName ? { ...r, tags: d.tags } : r));
+      fetchTags();
+    }).catch(() => {});
+  };
+
   const handleUploadComplete = (reportName: string) => {
     fetchReports();
+    fetchTags();
     loadReport(reportName);
   };
+
+  useEffect(() => {
+    if (addingTagFor && tagInputRef.current) tagInputRef.current.focus();
+  }, [addingTagFor]);
 
   // Auth loading state
   if (isLoading) {
@@ -128,7 +164,7 @@ function AppInner() {
     return (
       <UploadPage
         onComplete={handleUploadComplete}
-        onBack={() => { setView('list'); fetchReports(); }}
+        onBack={() => { setView('list'); fetchReports(); fetchTags(); }}
       />
     );
   }
@@ -160,8 +196,12 @@ function AppInner() {
     );
   }
 
-  // Sort reports by date descending
-  const sortedReports = [...reports].sort((a, b) => b.date.localeCompare(a.date));
+  // Sort and filter reports
+  const interviewTypes = [...new Set(reports.map(r => r.interviewType).filter(Boolean))] as string[];
+  const filteredReports = [...reports]
+    .filter(r => !filterType || r.interviewType === filterType)
+    .filter(r => !filterTag || r.tags.includes(filterTag))
+    .sort((a, b) => b.date.localeCompare(a.date));
 
   // Report list view
   return (
@@ -185,7 +225,49 @@ function AppInner() {
         </div>
       </header>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {sortedReports.length === 0 ? (
+        {/* Filters */}
+        {reports.length > 0 && (interviewTypes.length > 0 || allTags.length > 0) && (
+          <div className="flex flex-wrap items-center gap-3 mb-6">
+            {interviewTypes.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">轮次</span>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => setFilterType('')}
+                    className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${!filterType ? 'bg-emerald-600 text-white shadow-sm' : 'bg-bg-surface text-text-secondary border border-border-main hover:border-emerald-400'}`}
+                  >全部</button>
+                  {interviewTypes.map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setFilterType(filterType === t ? '' : t)}
+                      className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${filterType === t ? 'bg-emerald-600 text-white shadow-sm' : 'bg-bg-surface text-text-secondary border border-border-main hover:border-emerald-400'}`}
+                    >{t}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {allTags.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-text-secondary uppercase tracking-wider ml-2">标签</span>
+                <div className="flex gap-1.5 flex-wrap">
+                  <button
+                    onClick={() => setFilterTag('')}
+                    className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${!filterTag ? 'bg-emerald-600 text-white shadow-sm' : 'bg-bg-surface text-text-secondary border border-border-main hover:border-emerald-400'}`}
+                  >全部</button>
+                  {allTags.map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setFilterTag(filterTag === t ? '' : t)}
+                      className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${filterTag === t ? 'bg-emerald-600 text-white shadow-sm' : 'bg-bg-surface text-text-secondary border border-border-main hover:border-emerald-400'}`}
+                    >{t}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {reports.length === 0 ? (
           <div className="text-center py-24 bg-bg-surface rounded-3xl bento-shadow border border-border-main">
             <p className="text-text-secondary text-lg mb-6">暂无报告，开始您的第一次分析吧</p>
             <button
@@ -197,13 +279,12 @@ function AppInner() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6">
-            {sortedReports.map(report => (
-              <button
+            {filteredReports.map(report => (
+              <div
                 key={report.name}
-                onClick={() => loadReport(report.name)}
                 className="w-full text-left bg-bg-surface rounded-2xl bento-shadow border border-transparent hover:border-emerald-500/30 p-8 transition-all group"
               >
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start cursor-pointer" onClick={() => loadReport(report.name)}>
                   <div>
                     <h2 className="text-xl font-bold text-text-primary group-hover:text-emerald-600 transition-colors">{report.position}</h2>
                     <p className="text-sm text-text-secondary mt-2 flex items-center gap-2">
@@ -211,11 +292,63 @@ function AppInner() {
                       {report.date}
                     </p>
                   </div>
-                  <div className="px-4 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-full uppercase tracking-wider">
-                    已分析
+                  <div className="flex items-center gap-2">
+                    {report.interviewType && (
+                      <span className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-full">
+                        {report.interviewType}
+                      </span>
+                    )}
+                    <span className="px-4 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-full uppercase tracking-wider">
+                      已分析
+                    </span>
                   </div>
                 </div>
-              </button>
+                {/* Tags row */}
+                <div className="mt-3 flex items-center gap-2 flex-wrap">
+                  {report.tags.map(tag => (
+                    <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 text-text-secondary text-xs font-medium rounded-full">
+                      <Tag className="w-3 h-3" />
+                      {tag}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); removeTag(report.name, tag); }}
+                        className="ml-0.5 hover:text-red-500 transition-colors"
+                      ><X className="w-3 h-3" /></button>
+                    </span>
+                  ))}
+                  {addingTagFor === report.name ? (
+                    <form
+                      className="inline-flex items-center gap-1"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (newTagText.trim()) {
+                          addTag(report.name, newTagText.trim());
+                          setNewTagText('');
+                          setAddingTagFor(null);
+                        }
+                      }}
+                    >
+                      <input
+                        ref={tagInputRef}
+                        value={newTagText}
+                        onChange={(e) => setNewTagText(e.target.value)}
+                        onBlur={() => { setAddingTagFor(null); setNewTagText(''); }}
+                        onKeyDown={(e) => { if (e.key === 'Escape') { setAddingTagFor(null); setNewTagText(''); } }}
+                        placeholder="标签名"
+                        maxLength={20}
+                        className="w-20 px-2 py-1 text-xs bg-bg-base border border-border-main rounded-full focus:outline-none focus:border-emerald-500 text-text-primary"
+                      />
+                    </form>
+                  ) : (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setAddingTagFor(report.name); setNewTagText(''); }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-text-secondary hover:text-emerald-600 bg-transparent border border-dashed border-border-main rounded-full hover:border-emerald-400 transition-all"
+                    >
+                      <Plus className="w-3 h-3" />
+                      标签
+                    </button>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
         )}

@@ -15,7 +15,7 @@ import jwt from "jsonwebtoken";
 import { convertMdToJson } from "./convert.js";
 import { startPipeline, startTranscriptPipeline, getJob, getAllJobs, addJobListener, restoreJobs, type PipelineContext } from "./pipeline.js";
 import authRouter, { requireAuth } from "./auth.js";
-import { getReportsByUser, userOwnsReport, getReportContext } from "./db.js";
+import { getReportsByUser, userOwnsReport, getReportContext, setReportInterviewType, getReportInterviewType, getReportTags, addReportTag, removeReportTag, getAllTagsByUser } from "./db.js";
 import { extractCVText } from "./parseCV.js";
 
 const PORT = 8000;
@@ -51,7 +51,7 @@ app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (origin && allowedOrigins.includes(origin)) {
     res.header("Access-Control-Allow-Origin", origin);
-    res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
   }
   if (req.method === "OPTIONS") {
@@ -106,6 +106,8 @@ interface ReportListItem {
   name: string;
   position: string;
   date: string;
+  interviewType?: string;
+  tags: string[];
 }
 
 function findReports(userId: number): ReportListItem[] {
@@ -113,17 +115,21 @@ function findReports(userId: number): ReportListItem[] {
 
   return userReportNames.map((name) => {
     const file = `${name}_analysis_data.json`;
+    const tags = getReportTags(name);
     try {
       const raw = fs.readFileSync(path.join(DATA_DIR, file), "utf-8");
       const data = JSON.parse(raw);
       const meta = data.meta || {};
+      const interviewType = getReportInterviewType(name);
       return {
         name,
         position: meta.position || name,
         date: meta.date || "",
+        interviewType: interviewType || undefined,
+        tags,
       };
     } catch {
-      return { name, position: name, date: "" };
+      return { name, position: name, date: "", tags };
     }
   });
 }
@@ -205,6 +211,52 @@ app.get("/api/reports/:name/context", requireAuth, (req, res) => {
     return;
   }
   res.json(context);
+});
+
+// PUT /api/reports/:name/type - set interview type
+app.put("/api/reports/:name/type", requireAuth, (req, res) => {
+  const name = sanitizeName(req.params.name);
+  if (!name) { res.status(400).json({ error: "Invalid report name" }); return; }
+  if (!userOwnsReport(req.user!.userId, name)) { res.status(403).json({ error: "Forbidden" }); return; }
+  const { interviewType } = req.body;
+  if (!interviewType || typeof interviewType !== "string") { res.status(400).json({ error: "Missing interviewType" }); return; }
+  setReportInterviewType(name, req.user!.userId, interviewType.trim());
+  res.json({ ok: true });
+});
+
+// GET /api/reports/:name/tags - get tags for a report
+app.get("/api/reports/:name/tags", requireAuth, (req, res) => {
+  const name = sanitizeName(req.params.name);
+  if (!name) { res.status(400).json({ error: "Invalid report name" }); return; }
+  if (!userOwnsReport(req.user!.userId, name)) { res.status(403).json({ error: "Forbidden" }); return; }
+  res.json({ tags: getReportTags(name) });
+});
+
+// POST /api/reports/:name/tags - add a tag
+app.post("/api/reports/:name/tags", requireAuth, (req, res) => {
+  const name = sanitizeName(req.params.name);
+  if (!name) { res.status(400).json({ error: "Invalid report name" }); return; }
+  if (!userOwnsReport(req.user!.userId, name)) { res.status(403).json({ error: "Forbidden" }); return; }
+  const { tag } = req.body;
+  if (!tag || typeof tag !== "string" || tag.trim().length === 0) { res.status(400).json({ error: "Missing tag" }); return; }
+  addReportTag(name, tag.trim().slice(0, 20));
+  res.json({ tags: getReportTags(name) });
+});
+
+// DELETE /api/reports/:name/tags/:tag - remove a tag
+app.delete("/api/reports/:name/tags/:tag", requireAuth, (req, res) => {
+  const name = sanitizeName(req.params.name);
+  if (!name) { res.status(400).json({ error: "Invalid report name" }); return; }
+  if (!userOwnsReport(req.user!.userId, name)) { res.status(403).json({ error: "Forbidden" }); return; }
+  const rawTag = Array.isArray(req.params.tag) ? req.params.tag[0] : req.params.tag;
+  const tag = decodeURIComponent(rawTag);
+  removeReportTag(name, tag);
+  res.json({ tags: getReportTags(name) });
+});
+
+// GET /api/tags - get all tags for current user
+app.get("/api/tags", requireAuth, (req, res) => {
+  res.json({ tags: getAllTagsByUser(req.user!.userId) });
 });
 
 // POST /api/convert - convert markdown to JSON
@@ -342,7 +394,7 @@ app.get("/api/pipeline/status/:id", requireAuth, (req, res) => {
 
 // GET /api/pipeline/jobs - list user's jobs
 app.get("/api/pipeline/jobs", requireAuth, (req, res) => {
-  res.json({ jobs: getAllJobs(req.user!.userId) });
+  res.json(getAllJobs(req.user!.userId));
 });
 
 // POST /api/pipeline/nonce - get a one-time nonce for SSE auth

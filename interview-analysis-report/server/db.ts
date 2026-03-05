@@ -57,6 +57,14 @@ db.exec(`
     cv_text TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS report_tags (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_name TEXT NOT NULL,
+    tag TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(report_name, tag)
+  );
 `);
 
 // Pre-seed invite codes (ignore if already exist)
@@ -253,6 +261,46 @@ export function getReportContext(reportName: string): { jd_text: string | null; 
   return db
     .prepare("SELECT jd_text, cv_text FROM report_context WHERE report_name = ?")
     .get(reportName) as { jd_text: string | null; cv_text: string | null } | undefined;
+}
+
+// ── Report interview_type helpers ──
+
+// Add interview_type column if not exists (migration)
+try {
+  db.exec("ALTER TABLE reports ADD COLUMN interview_type TEXT DEFAULT NULL");
+} catch {
+  // Column already exists
+}
+
+export function setReportInterviewType(reportName: string, userId: number, interviewType: string): void {
+  db.prepare("UPDATE reports SET interview_type = ? WHERE user_id = ? AND name = ?").run(interviewType, userId, reportName);
+}
+
+export function getReportInterviewType(reportName: string): string | null {
+  const row = db.prepare("SELECT interview_type FROM reports WHERE name = ?").get(reportName) as { interview_type: string | null } | undefined;
+  return row?.interview_type ?? null;
+}
+
+// ── Report tags helpers ──
+
+export function addReportTag(reportName: string, tag: string): void {
+  db.prepare("INSERT OR IGNORE INTO report_tags (report_name, tag) VALUES (?, ?)").run(reportName, tag);
+}
+
+export function removeReportTag(reportName: string, tag: string): void {
+  db.prepare("DELETE FROM report_tags WHERE report_name = ? AND tag = ?").run(reportName, tag);
+}
+
+export function getReportTags(reportName: string): string[] {
+  const rows = db.prepare("SELECT tag FROM report_tags WHERE report_name = ? ORDER BY created_at").all(reportName) as { tag: string }[];
+  return rows.map(r => r.tag);
+}
+
+export function getAllTagsByUser(userId: number): string[] {
+  const rows = db.prepare(
+    "SELECT DISTINCT t.tag FROM report_tags t JOIN reports r ON t.report_name = r.name WHERE r.user_id = ? ORDER BY t.tag"
+  ).all(userId) as { tag: string }[];
+  return rows.map(r => r.tag);
 }
 
 export default db;

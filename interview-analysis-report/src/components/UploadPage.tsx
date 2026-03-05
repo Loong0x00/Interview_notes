@@ -64,6 +64,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
   const [jdText, setJdText] = useState("");
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [showContext, setShowContext] = useState(false);
+  const [interviewType, setInterviewType] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cvInputRef = useRef<HTMLInputElement>(null);
 
@@ -111,6 +112,14 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
         evtSource.close();
         setUploading(false);
         if (data.result) {
+          // Set interview type if selected
+          if (interviewType) {
+            authFetch(`/api/reports/${encodeURIComponent(data.result)}/type`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ interviewType }),
+            }).catch(() => {});
+          }
           setTimeout(() => onComplete(data.result!), 1500);
         }
       } else if (data.status === "error") {
@@ -164,6 +173,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
     setJob(null);
     setJdText("");
     setCvFile(null);
+    setInterviewType("");
     setShowContext(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -266,6 +276,26 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                 placeholder="粘贴岗位描述..."
                 className="w-full h-48 p-5 bg-bg-base border border-border-main rounded-2xl text-base text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all resize-none"
               />
+            </div>
+
+            {/* Interview Type */}
+            <div className="bg-bg-surface rounded-3xl bento-shadow border border-border-main p-8 space-y-4">
+              <div>
+                <h2 className="text-lg font-bold text-text-primary">面试轮次</h2>
+                <p className="text-sm text-text-secondary mt-1">选填，用于分类筛选</p>
+              </div>
+              <select
+                value={interviewType}
+                onChange={(e) => setInterviewType(e.target.value)}
+                className="w-full px-5 py-3 bg-bg-base border border-border-main rounded-2xl text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all appearance-none cursor-pointer"
+              >
+                <option value="">未指定</option>
+                <option value="一面">一面</option>
+                <option value="二面">二面</option>
+                <option value="三面">三面</option>
+                <option value="HR面">HR面</option>
+                <option value="终面">终面</option>
+              </select>
             </div>
 
             {/* CV Upload */}
