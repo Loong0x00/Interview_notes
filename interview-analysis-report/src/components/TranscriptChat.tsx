@@ -38,7 +38,7 @@ export default function TranscriptChat({ segments, interviewerSpeaker, activeSeg
             className={`flex items-end gap-2 ${isInterviewer ? 'flex-row' : 'flex-row-reverse'}`}
           >
             {/* Avatar */}
-            <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${isInterviewer ? 'bg-zinc-400' : 'bg-[var(--brand)]'}`}>
+            <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${isInterviewer ? 'bg-zinc-400' : 'bg-indigo-500'}`}>
               {isInterviewer ? '官' : '候'}
             </div>
 
@@ -50,8 +50,8 @@ export default function TranscriptChat({ segments, interviewerSpeaker, activeSeg
               <div className={`
                 relative px-3 py-2 text-sm leading-relaxed transition-all duration-300
                 ${isInterviewer
-                  ? 'bg-[var(--bg-surface)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-[16px] rounded-tl-[4px] shadow-sm dark:shadow-none'
-                  : 'bg-[var(--brand)] text-white rounded-[16px] rounded-tr-[4px] shadow-sm'
+                  ? 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-2xl rounded-tl-sm shadow-sm dark:shadow-zinc-900/50'
+                  : 'bg-indigo-600 text-white rounded-2xl rounded-tr-sm shadow-sm'
                 }
                 ${isActive
                   ? 'ring-2 ring-amber-400 shadow-md'
