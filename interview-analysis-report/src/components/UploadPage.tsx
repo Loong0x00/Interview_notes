@@ -299,6 +299,28 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                 </span>
               </div>
             </div>
+
+            {/* Interview Type */}
+            {!job && (
+              <div className="bg-bg-surface rounded-3xl bento-shadow border border-border-main p-8 space-y-4">
+                <div>
+                  <h2 className="text-lg font-bold text-text-primary">面试轮次</h2>
+                  <p className="text-sm text-text-secondary mt-1">选填，用于分类筛选</p>
+                </div>
+                <select
+                  value={interviewType}
+                  onChange={(e) => setInterviewType(e.target.value)}
+                  className="w-full px-4 py-2 bg-bg-base border border-border-main rounded-full text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all appearance-none cursor-pointer"
+                >
+                  <option value="">未指定</option>
+                  <option value="一面">一面</option>
+                  <option value="二面">二面</option>
+                  <option value="三面">三面</option>
+                  <option value="HR面">HR面</option>
+                  <option value="终面">终面</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {/* ===== Right Column (8/12): Toggle + Upload + Progress ===== */}
@@ -506,24 +528,6 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
               </div>
             </div>
 
-            {/* Interview Type */}
-            {!job && (
-              <div className="flex items-center justify-center gap-3">
-                <span className="text-sm font-bold text-text-secondary">面试轮次</span>
-                <select
-                  value={interviewType}
-                  onChange={(e) => setInterviewType(e.target.value)}
-                  className="px-4 py-2 bg-bg-base border border-border-main rounded-full text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all appearance-none cursor-pointer"
-                >
-                  <option value="">未指定</option>
-                  <option value="一面">一面</option>
-                  <option value="二面">二面</option>
-                  <option value="三面">三面</option>
-                  <option value="HR面">HR面</option>
-                  <option value="终面">终面</option>
-                </select>
-              </div>
-            )}
 
             {/* Upload Button */}
             {file && !job && (

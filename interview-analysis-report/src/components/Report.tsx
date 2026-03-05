@@ -102,50 +102,7 @@ const Section = ({ title, icon, children, id }: SectionProps) => (
   </section>
 );
 
-const ANSWER_TRUNCATE_LINES = 3;
-const ANSWER_LINE_HEIGHT = 1.625; // leading-relaxed = 1.625
-const ANSWER_FONT_SIZE = 14; // text-sm = 14px
-const ANSWER_MAX_COLLAPSED_HEIGHT = ANSWER_TRUNCATE_LINES * ANSWER_LINE_HEIGHT * ANSWER_FONT_SIZE;
-
-const CollapsibleAnswer: React.FC<{ content: string }> = ({ content }) => {
-  const [expanded, setExpanded] = useState(false);
-  const [needsTruncation, setNeedsTruncation] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (contentRef.current) {
-      setNeedsTruncation(contentRef.current.scrollHeight > ANSWER_MAX_COLLAPSED_HEIGHT + 10);
-    }
-  }, [content]);
-
-  return (
-    <div>
-      <motion.div
-        ref={contentRef}
-        initial={false}
-        animate={{ height: expanded || !needsTruncation ? 'auto' : ANSWER_MAX_COLLAPSED_HEIGHT }}
-        transition={{ duration: 0.3, ease: 'easeInOut' }}
-        className="text-base leading-relaxed text-text-primary overflow-hidden relative"
-      >
-        {content}
-        {!expanded && needsTruncation && (
-          <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-bg-surface to-transparent" />
-        )}
-      </motion.div>
-      {needsTruncation && (
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="mt-3 text-sm text-emerald-600 hover:text-emerald-700 font-bold transition-colors"
-        >
-          {expanded ? '收起' : '展开查看完整回答'}
-        </button>
-      )}
-    </div>
-  );
-};
-
 const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({ title, steps: rawSteps }) => {
-  const [expandedAnswers, setExpandedAnswers] = useState<Set<number>>(new Set());
   // Filter out trigger steps — they'll be rendered inline below their preceding answer
   const steps = rawSteps.filter(s => s.type !== 'trigger');
   // Build a map: for each answer step index in rawSteps, find its following trigger
@@ -159,15 +116,6 @@ const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({
   const rawIndices: number[] = [];
   rawSteps.forEach((s, i) => { if (s.type !== 'trigger') rawIndices.push(i); });
 
-  const toggleAnswer = (idx: number) => {
-    setExpandedAnswers(prev => {
-      const next = new Set(prev);
-      if (next.has(idx)) next.delete(idx);
-      else next.add(idx);
-      return next;
-    });
-  };
-
   return (
   <Card className="mb-8">
     <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 flex justify-between items-center">
@@ -177,7 +125,6 @@ const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({
       <div className="relative pl-10 space-y-10 before:absolute before:left-[13px] before:top-2 before:bottom-2 before:w-[2px] before:bg-border-main">
         {steps.map((step, idx) => {
           const trigger = triggerAfter.get(rawIndices[idx]);
-          const isAnswerExpanded = expandedAnswers.has(idx);
           return (
           <motion.div
             key={idx}
@@ -211,22 +158,10 @@ const DialogueChainView: React.FC<{ title: string; steps: DialogueStep[] }> = ({
 
               {step.type === 'answer' ? (
                 <>
-                  {trigger && !isAnswerExpanded ? (
-                    <div className="text-base leading-relaxed text-text-secondary font-medium italic">
-                      "{trigger.content}"
-                    </div>
-                  ) : (
-                    <CollapsibleAnswer content={step.content} />
-                  )}
-                  <div className="flex items-center gap-3 mt-2">
-                    <button
-                      onClick={() => toggleAnswer(idx)}
-                      className="text-sm text-emerald-600 hover:text-emerald-700 font-bold transition-colors"
-                    >
-                      {isAnswerExpanded ? '收起回答' : '展开回答'}
-                    </button>
+                  <div className="text-base leading-relaxed text-text-primary">
+                    {step.content}
                   </div>
-                  {trigger && isAnswerExpanded && (
+                  {trigger && (
                     <div className="mt-4 p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/50 flex items-start gap-3 text-sm">
                       <span className="shrink-0 px-2 py-0.5 rounded-full bg-amber-600 text-white text-[10px] font-bold uppercase tracking-wider">触发追问</span>
                       <span className="text-amber-800 dark:text-amber-200 leading-relaxed font-medium">"{trigger.content}"</span>
@@ -724,12 +659,12 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
                 return (
                   <div className="space-y-8">
                     {key.map((chain, idx) => (
-                      <DialogueChainView key={`key-${idx}`} title={chain.title} steps={chain.steps} />
+                      <DialogueChainView key={`key-${idx}`} title={chain.title.replace(/^链条\s*[A-Za-z][\s：:]+/, '')} steps={chain.steps} />
                     ))}
                     {rest.length > 0 && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {rest.map((chain, idx) => (
-                          <DialogueChainView key={`rest-${idx}`} title={chain.title} steps={chain.steps} />
+                          <DialogueChainView key={`rest-${idx}`} title={chain.title.replace(/^链条\s*[A-Za-z][\s：:]+/, '')} steps={chain.steps} />
                         ))}
                       </div>
                     )}
