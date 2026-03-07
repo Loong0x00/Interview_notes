@@ -14,8 +14,9 @@ import multer from "multer";
 import jwt from "jsonwebtoken";
 import { convertMdToJson } from "./convert.js";
 import { startPipeline, startTranscriptPipeline, getJob, getAllJobs, addJobListener, restoreJobs, type PipelineContext } from "./pipeline.js";
+import { getDurationMs } from "./transcribe.js";
 import authRouter, { requireAuth } from "./auth.js";
-import { getReportsByUser, userOwnsReport, getReportContext, setReportInterviewType, getReportInterviewType, getReportTags, addReportTag, removeReportTag, getAllTagsByUser, getReportUploadTime, getReportOriginalFilename, getReportDisplayName, setReportDisplayName } from "./db.js";
+import { getReportsByUser, userOwnsReport, getReportContext, setReportInterviewType, getReportInterviewType, getReportTags, addReportTag, removeReportTag, getAllTagsByUser, getReportUploadTime, getReportOriginalFilename, getReportDisplayName, setReportDisplayName, getTranscriptionQuotaMs, deductTranscriptionQuota } from "./db.js";
 import { extractCVText } from "./parseCV.js";
 
 const PORT = 8000;
@@ -326,6 +327,29 @@ app.post("/api/pipeline/start", requireAuth, audioUpload.fields([{ name: "audio"
   const audioPath = audioFile.path;
   const originalName = Buffer.from(audioFile.originalname, "latin1").toString("utf-8");
 
+  // Check transcription quota
+  const userId = req.user!.userId;
+  let audioDurationMs: number;
+  try {
+    audioDurationMs = getDurationMs(audioPath);
+  } catch (err) {
+    try { fs.unlinkSync(audioPath); } catch { /* ignore */ }
+    res.status(400).json({ error: "无法读取音频时长，请检查文件格式" });
+    return;
+  }
+
+  const quotaMs = getTranscriptionQuotaMs(userId);
+  if (audioDurationMs > quotaMs) {
+    try { fs.unlinkSync(audioPath); } catch { /* ignore */ }
+    const quotaMin = Math.floor(quotaMs / 60000);
+    const durationMin = Math.ceil(audioDurationMs / 60000);
+    res.status(403).json({ error: `转写时长不足：剩余 ${quotaMin} 分钟，本次需要 ${durationMin} 分钟` });
+    return;
+  }
+
+  // Deduct quota upfront
+  deductTranscriptionQuota(userId, audioDurationMs);
+
   // Build context from JD text and CV file
   const context: PipelineContext = {};
   const jdText = typeof req.body.jdText === "string" ? req.body.jdText.trim().slice(0, 3000) : undefined;
@@ -344,7 +368,7 @@ app.post("/api/pipeline/start", requireAuth, audioUpload.fields([{ name: "audio"
   }
 
   console.log(`[API] Pipeline start: ${originalName} -> ${audioPath}${context.jdText ? " [+JD]" : ""}${context.cvText ? " [+CV]" : ""}`);
-  const jobId = startPipeline(audioPath, originalName, req.user!.userId, Object.keys(context).length > 0 ? context : undefined);
+  const jobId = startPipeline(audioPath, originalName, userId, Object.keys(context).length > 0 ? context : undefined);
 
   res.json({ jobId });
 });
@@ -400,6 +424,12 @@ app.post("/api/pipeline/start-transcript", requireAuth, transcriptUpload.fields(
   const jobId = startTranscriptPipeline(filePath, originalName, req.user!.userId, Object.keys(context).length > 0 ? context : undefined);
 
   res.json({ jobId });
+});
+
+// GET /api/user/quota - get remaining transcription quota
+app.get("/api/user/quota", requireAuth, (req, res) => {
+  const quotaMs = getTranscriptionQuotaMs(req.user!.userId);
+  res.json({ transcriptionQuotaMs: quotaMs, transcriptionQuotaMin: Math.floor(quotaMs / 60000) });
 });
 
 // GET /api/pipeline/status/:id - get job status

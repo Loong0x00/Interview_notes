@@ -67,6 +67,11 @@ db.exec(`
   );
 `);
 
+// ── Transcription quota migration ──
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN transcription_quota_ms INTEGER NOT NULL DEFAULT 7200000`);
+} catch { /* column already exists */ }
+
 // ── used_invite_codes table (for Ed25519 invite code replay prevention) ──
 
 db.exec(`
@@ -108,6 +113,21 @@ export function createUser(username: string, passwordHash: string): number {
 export function getUserCount(): number {
   const row = db.prepare("SELECT COUNT(*) as cnt FROM users").get() as { cnt: number };
   return row.cnt;
+}
+
+// ── Transcription quota helpers ──
+
+export function getTranscriptionQuotaMs(userId: number): number {
+  const row = db
+    .prepare("SELECT transcription_quota_ms FROM users WHERE id = ?")
+    .get(userId) as { transcription_quota_ms: number } | undefined;
+  return row?.transcription_quota_ms ?? 0;
+}
+
+export function deductTranscriptionQuota(userId: number, durationMs: number): void {
+  db.prepare(
+    "UPDATE users SET transcription_quota_ms = MAX(0, transcription_quota_ms - ?) WHERE id = ?"
+  ).run(durationMs, userId);
 }
 
 // ── Used invite code helpers (Ed25519 replay prevention) ──
