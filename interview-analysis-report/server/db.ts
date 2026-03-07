@@ -206,8 +206,11 @@ export function userOwnsReport(userId: number, name: string): boolean {
 // ── Orphan report migration ──
 
 export function migrateOrphanReports(userId: number): void {
+  const REPORTS_DIR = path.resolve(DATA_DIR, "reports");
+  if (!fs.existsSync(REPORTS_DIR)) return;
+
   const files = fs
-    .readdirSync(DATA_DIR)
+    .readdirSync(REPORTS_DIR)
     .filter((f) => f.endsWith("_analysis_data.json"));
 
   const existingNames = new Set(

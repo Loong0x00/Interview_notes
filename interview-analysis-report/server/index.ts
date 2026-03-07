@@ -22,10 +22,16 @@ import { extractCVText } from "./parseCV.js";
 const PORT = 8000;
 const DATA_DIR = path.resolve(__dirname, "../../");
 const UPLOAD_DIR = path.resolve(DATA_DIR, "uploads");
+const REPORTS_DIR = path.resolve(DATA_DIR, "reports");
 
 // Ensure uploads directory exists
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
+
+// Ensure reports directory exists
+if (!fs.existsSync(REPORTS_DIR)) {
+  fs.mkdirSync(REPORTS_DIR, { recursive: true });
 }
 
 // SSE nonce store (short-lived, one-time-use tokens for EventSource auth)
@@ -121,7 +127,7 @@ function findReports(userId: number): ReportListItem[] {
     const file = `${name}_analysis_data.json`;
     const tags = getReportTags(name);
     try {
-      const raw = fs.readFileSync(path.join(DATA_DIR, file), "utf-8");
+      const raw = fs.readFileSync(path.join(REPORTS_DIR, file), "utf-8");
       const data = JSON.parse(raw);
       const meta = data.meta || {};
       const interviewType = getReportInterviewType(name);
@@ -148,7 +154,7 @@ function findReports(userId: number): ReportListItem[] {
 }
 
 function loadReport(name: string): object | null {
-  const filePath = path.join(DATA_DIR, `${name}_analysis_data.json`);
+  const filePath = path.join(REPORTS_DIR, `${name}_analysis_data.json`);
   if (!fs.existsSync(filePath)) return null;
   const raw = fs.readFileSync(filePath, "utf-8");
   try {
@@ -194,7 +200,7 @@ app.get("/api/reports/:name/transcript", requireAuth, (req, res) => {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
-  const filePath = path.join(DATA_DIR, `${name}_transcript.json`);
+  const filePath = path.join(REPORTS_DIR, `${name}_transcript.json`);
   if (!fs.existsSync(filePath)) {
     res.status(404).json({ error: "Transcript not found" });
     return;
@@ -233,7 +239,7 @@ app.post("/api/reports/:name/reanalyze", requireAuth, audioUpload.fields([{ name
   if (!userOwnsReport(req.user!.userId, name)) { res.status(403).json({ error: "Forbidden" }); return; }
 
   // Check transcript exists
-  const transcriptPath = path.join(DATA_DIR, `${name}_transcript.json`);
+  const transcriptPath = path.join(REPORTS_DIR, `${name}_transcript.json`);
   if (!fs.existsSync(transcriptPath)) {
     res.status(404).json({ error: "找不到转录数据，无法重新分析" });
     return;
@@ -347,7 +353,7 @@ app.post("/api/convert", requireAuth, async (req, res) => {
     const result = await convertMdToJson(mdContent);
 
     if (saveName) {
-      const outPath = path.join(DATA_DIR, `${saveName}_analysis_data.json`);
+      const outPath = path.join(REPORTS_DIR, `${saveName}_analysis_data.json`);
       fs.writeFileSync(outPath, JSON.stringify(result, null, 2), "utf-8");
       console.log(`[API] Saved: ${outPath}`);
     }

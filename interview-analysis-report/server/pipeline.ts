@@ -11,6 +11,28 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DATA_DIR = path.resolve(__dirname, "../../");
+const REPORTS_DIR = path.resolve(DATA_DIR, "reports");
+
+if (!fs.existsSync(REPORTS_DIR)) {
+  fs.mkdirSync(REPORTS_DIR, { recursive: true });
+}
+
+// Migrate existing report files from root to reports/
+(function migrateReportFiles() {
+  try {
+    const files = fs.readdirSync(DATA_DIR).filter(
+      f => f.endsWith("_transcript.json") || f.endsWith("_analysis_data.json")
+    );
+    for (const file of files) {
+      const src = path.join(DATA_DIR, file);
+      const dest = path.join(REPORTS_DIR, file);
+      if (!fs.existsSync(dest)) {
+        fs.renameSync(src, dest);
+        console.log(`[Migration] Moved ${file} → reports/`);
+      }
+    }
+  } catch { /* ignore migration errors */ }
+})();
 
 export type JobStatus =
   | "uploading"
@@ -113,8 +135,8 @@ async function runAnalysis(
   stepPrefix: string,
   context?: PipelineContext
 ): Promise<void> {
-  const transcriptPath = path.join(DATA_DIR, `${baseName}_transcript.json`);
-  const analysisJsonPath = path.join(DATA_DIR, `${baseName}_analysis_data.json`);
+  const transcriptPath = path.join(REPORTS_DIR, `${baseName}_transcript.json`);
+  const analysisJsonPath = path.join(REPORTS_DIR, `${baseName}_analysis_data.json`);
 
   // Save normalized transcript
   fs.writeFileSync(transcriptPath, JSON.stringify(segments, null, 2), "utf-8");
@@ -135,7 +157,7 @@ async function runAnalysis(
   let jsonData: any;
 
   if (cachedAnalysisReport) {
-    const cachedAnalysisPath = path.join(DATA_DIR, `${cachedAnalysisReport}_analysis_data.json`);
+    const cachedAnalysisPath = path.join(REPORTS_DIR, `${cachedAnalysisReport}_analysis_data.json`);
     if (fs.existsSync(cachedAnalysisPath)) {
       console.log(`[Pipeline] Analysis cache hit: ${analysisCacheKey.slice(0, 12)}... → ${cachedAnalysisReport}`);
       jsonData = JSON.parse(fs.readFileSync(cachedAnalysisPath, "utf-8"));
@@ -236,7 +258,7 @@ async function runReanalysis(
   context?: PipelineContext
 ): Promise<void> {
   try {
-    const transcriptPath = path.join(DATA_DIR, `${reportName}_transcript.json`);
+    const transcriptPath = path.join(REPORTS_DIR, `${reportName}_transcript.json`);
     if (!fs.existsSync(transcriptPath)) {
       throw new Error("找不到转录文件，无法重新分析");
     }
@@ -262,7 +284,7 @@ async function runReanalysis(
     let jsonData: any;
 
     if (cachedAnalysisReport) {
-      const cachedAnalysisPath = path.join(DATA_DIR, `${cachedAnalysisReport}_analysis_data.json`);
+      const cachedAnalysisPath = path.join(REPORTS_DIR, `${cachedAnalysisReport}_analysis_data.json`);
       if (fs.existsSync(cachedAnalysisPath)) {
         console.log(`[Pipeline] Reanalysis cache hit: ${analysisCacheKey.slice(0, 12)}... → ${cachedAnalysisReport}`);
         jsonData = JSON.parse(fs.readFileSync(cachedAnalysisPath, "utf-8"));
@@ -291,7 +313,7 @@ async function runReanalysis(
       setCacheEntry(analysisCacheKey, "analysis", reportName);
     }
 
-    const analysisJsonPath = path.join(DATA_DIR, `${reportName}_analysis_data.json`);
+    const analysisJsonPath = path.join(REPORTS_DIR, `${reportName}_analysis_data.json`);
     fs.writeFileSync(analysisJsonPath, JSON.stringify(jsonData, null, 2), "utf-8");
     console.log(`[Pipeline] Reanalysis saved: ${analysisJsonPath}`);
 
@@ -376,7 +398,7 @@ async function runPipeline(
     let segments: TranscriptSegment[];
 
     if (cachedTranscriptReport) {
-      const cachedPath = path.join(DATA_DIR, `${cachedTranscriptReport}_transcript.json`);
+      const cachedPath = path.join(REPORTS_DIR, `${cachedTranscriptReport}_transcript.json`);
       if (fs.existsSync(cachedPath)) {
         console.log(`[Pipeline] Transcription cache hit: ${audioHash.slice(0, 12)}... → ${cachedTranscriptReport}`);
         segments = JSON.parse(fs.readFileSync(cachedPath, "utf-8"));
