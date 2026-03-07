@@ -242,18 +242,18 @@ function AppInner() {
   return (
     <div className="min-h-screen bg-bg-base font-sans text-text-primary">
       <header className="bg-transparent">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-emerald-500/20">R</div>
-            <h1 className="text-xl font-bold text-text-primary tracking-tight">面试分析大师</h1>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3 flex-shrink-0 min-w-0">
+            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-emerald-500/20 flex-shrink-0">R</div>
+            <h1 className="hidden sm:block text-xl font-bold text-text-primary tracking-tight">面试分析大师</h1>
             <button
               onClick={() => setView('upload')}
-              className="ml-4 px-5 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-full hover:bg-emerald-700 transition-all shadow-md shadow-emerald-500/10"
+              className="ml-4 text-xs px-3 py-1.5 sm:text-sm sm:px-5 sm:py-2 bg-emerald-600 text-white font-semibold rounded-full hover:bg-emerald-700 transition-all shadow-md shadow-emerald-500/10 flex-shrink-0"
             >
               上传新面试
             </button>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-shrink-0">
             <ThemeToggle />
             <button onClick={logout} className="text-sm text-text-secondary hover:text-text-primary transition-colors font-medium">退出登录</button>
           </div>
@@ -338,7 +338,7 @@ function AppInner() {
                 key={report.name}
                 className="w-full text-left bg-bg-surface rounded-2xl bento-shadow border border-transparent hover:border-emerald-500/30 p-8 transition-all group"
               >
-                <div className="flex justify-between items-start cursor-pointer" onClick={() => loadReport(report.name)}>
+                <div className="flex flex-wrap justify-between items-start cursor-pointer" onClick={() => loadReport(report.name)}>
                   <div>
                     <div className="flex items-center gap-2">
                       {editingName === report.name ? (
@@ -366,7 +366,7 @@ function AppInner() {
                           <h2 className="text-xl font-bold text-text-primary group-hover:text-emerald-600 transition-colors">{report.displayName || report.position}</h2>
                           <button
                             onClick={(e) => { e.stopPropagation(); setEditingName(report.name); setEditingDisplayName(report.displayName || report.position); }}
-                            className="p-1 text-text-secondary hover:text-emerald-600 transition-colors opacity-0 group-hover:opacity-100"
+                            className="p-1 text-text-secondary hover:text-emerald-600 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
@@ -378,7 +378,7 @@ function AppInner() {
                       {report.uploadTime ? new Date(report.uploadTime).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-') : report.date}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0 mt-2 sm:mt-0">
                     {report.interviewType && (
                       <span className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-full">
                         {report.interviewType}

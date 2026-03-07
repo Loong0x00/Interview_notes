@@ -20,6 +20,8 @@ import {
   ChevronDown,
   ChevronUp,
   Info,
+  Menu,
+  X,
 } from 'lucide-react';
 import type { AnalysisReport, DialogueStep, TranscriptSegment } from '../types';
 import TranscriptChat from './TranscriptChat';
@@ -564,7 +566,8 @@ const PositionSection: React.FC<{
               </div>
             )}
 
-            <div className="overflow-x-auto rounded-xl border border-border-main">
+            {/* Desktop: table view */}
+            <div className="hidden md:block overflow-x-auto rounded-xl border border-border-main">
               <Table
                 headers={['维度', isInferred ? '推断要求' : 'JD 要求', '候选人证据', '得分', '评价']}
                 rows={data.fitAnalysis.dimensions.map(d => [
@@ -575,6 +578,30 @@ const PositionSection: React.FC<{
                   d.comment,
                 ])}
               />
+            </div>
+
+            {/* Mobile: stacked cards */}
+            <div className="md:hidden space-y-3">
+              {data.fitAnalysis.dimensions.map((d, i) => (
+                <div key={i} className="rounded-xl border border-border-main bg-bg-surface p-4 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-text-primary">{d.dimension}</span>
+                    <Badge color={d.score >= 80 ? 'green' : d.score >= 60 ? 'amber' : 'red'}>{d.score}</Badge>
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{isInferred ? '推断要求' : 'JD 要求'}</span>
+                    <p className="text-sm text-text-primary mt-0.5">{d.jdRequirement}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">候选人证据</span>
+                    <p className="text-sm text-text-primary mt-0.5">{d.candidateEvidence}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">评价</span>
+                    <p className="text-sm text-text-primary mt-0.5">{d.comment}</p>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -625,6 +652,7 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
   const { meta, basicInfo, questions, questionStats, dialogueChains, focusMap, candidateSummary } = data;
   const { authFetch } = useAuth();
 
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [questionFilter, setQuestionFilter] = useState<'全部' | '预设' | '追问' | '澄清'>('全部');
   const [transcript, setTranscript] = useState<TranscriptSegment[]>([]);
   const [transcriptLoading, setTranscriptLoading] = useState(false);
@@ -730,6 +758,65 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
               })()}
             </nav>
           </aside>
+
+          {/* Mobile Nav Floating Button + Drawer */}
+          <div className="lg:hidden">
+            {/* Floating menu button */}
+            <button
+              onClick={() => setMobileNavOpen(true)}
+              className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-emerald-600 text-white shadow-lg flex items-center justify-center hover:bg-emerald-700 transition-colors"
+              aria-label="打开导航"
+            >
+              <Menu size={24} />
+            </button>
+
+            {/* Overlay backdrop */}
+            {mobileNavOpen && (
+              <div
+                className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+                onClick={() => setMobileNavOpen(false)}
+              />
+            )}
+
+            {/* Slide-in drawer */}
+            <div
+              className={`fixed top-0 left-0 z-50 h-full w-72 bg-bg-main border-r border-border-main shadow-2xl transform transition-transform duration-300 ease-in-out ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}
+            >
+              <div className="flex items-center justify-between px-6 py-5 border-b border-border-main">
+                <span className="text-lg font-bold text-text-primary">导航</span>
+                <button
+                  onClick={() => setMobileNavOpen(false)}
+                  className="p-2 rounded-xl hover:bg-bg-surface transition-colors"
+                  aria-label="关闭导航"
+                >
+                  <X size={20} className="text-text-secondary" />
+                </button>
+              </div>
+              <nav className="p-4 space-y-2">
+                {(() => {
+                  const chineseNumbers = ['一', '二', '三', '四', '五', '六', '七', '八'];
+                  const navItems = [
+                    { id: 'position', label: '岗位摘要', icon: Briefcase },
+                    { id: 'summary', label: '表现摘要', icon: CheckCircle2 },
+                    { id: 'questions', label: '问题列表', icon: MessageSquare },
+                    { id: 'chains', label: '对话链分析', icon: TrendingUp },
+                    { id: 'focus', label: '关注图谱', icon: Target },
+                  ];
+                  return navItems.map((item, idx) => (
+                    <a
+                      key={item.id}
+                      href={`#${item.id}`}
+                      onClick={() => setMobileNavOpen(false)}
+                      className="flex items-center gap-4 px-6 py-4 text-sm font-bold text-text-secondary rounded-2xl hover:bg-bg-surface hover:text-emerald-600 hover:bento-shadow border border-transparent hover:border-border-main transition-all group"
+                    >
+                      <item.icon size={18} className="group-hover:text-emerald-600 transition-colors" />
+                      {chineseNumbers[idx]}、{item.label}
+                    </a>
+                  ));
+                })()}
+              </nav>
+            </div>
+          </div>
 
           {/* Main Content */}
           <main className="lg:col-span-9 space-y-16">

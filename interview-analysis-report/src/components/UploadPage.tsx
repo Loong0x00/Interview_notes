@@ -251,17 +251,17 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
     <div className="min-h-screen bg-bg-base font-sans text-text-primary transition-colors duration-200">
       {/* Header — consistent with App.tsx list page */}
       <header className="bg-transparent">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4 flex-shrink-0 min-w-0">
             <button
               onClick={onBack}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-text-secondary bg-bg-surface bento-shadow border border-border-main rounded-full hover:text-emerald-600 transition-all"
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-text-secondary bg-bg-surface bento-shadow border border-border-main rounded-full hover:text-emerald-600 transition-all flex-shrink-0"
             >
               <ArrowLeft size={18} />
               返回
             </button>
-            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-emerald-500/20">R</div>
-            <h1 className="text-xl font-bold text-text-primary tracking-tight">上传面试</h1>
+            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-emerald-500/20 flex-shrink-0">R</div>
+            <h1 className="hidden sm:block text-xl font-bold text-text-primary tracking-tight">上传面试</h1>
           </div>
           <div className="flex items-center gap-4">
             <button
