@@ -147,6 +147,95 @@ async function runAnalysis(
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Reanalysis pipeline (reuse existing transcript, run new analysis)
+// ═══════════════════════════════════════════════════════════════
+
+export function startReanalysis(
+  reportName: string,
+  userId: number,
+  context?: PipelineContext
+): string {
+  const id = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const job: PipelineJob = {
+    id,
+    fileName: reportName,
+    status: "analyzing",
+    progress: "准备重新分析...",
+    createdAt: Date.now(),
+    userId,
+  };
+  jobs.set(id, job);
+  saveJob(job);
+
+  // Run async
+  runReanalysis(job, reportName, context).catch((err) => {
+    console.error(`[Pipeline] Reanalysis job ${id} failed:`, err);
+    job.status = "error";
+    job.error = err.message || String(err);
+    job.progress = "重新分析失败";
+    updateJob(job);
+  });
+
+  return id;
+}
+
+async function runReanalysis(
+  job: PipelineJob,
+  reportName: string,
+  context?: PipelineContext
+): Promise<void> {
+  try {
+    const transcriptPath = path.join(DATA_DIR, `${reportName}_transcript.json`);
+    if (!fs.existsSync(transcriptPath)) {
+      throw new Error("找不到转录文件，无法重新分析");
+    }
+
+    const segments: TranscriptSegment[] = JSON.parse(
+      fs.readFileSync(transcriptPath, "utf-8")
+    );
+
+    if (!segments || segments.length === 0) {
+      throw new Error("转录文件为空");
+    }
+
+    // AI Analysis
+    job.progress = "[1/1] AI 重新分析中...";
+    job.progressPercent = 10;
+    updateJob(job);
+
+    const transcriptText = formatTranscript(segments).slice(0, 30000);
+    const jsonData = await analyze(transcriptText, context, (detail, percent) => {
+      job.progress = `[1/1] AI 重新分析 - ${detail}`;
+      if (percent !== undefined) {
+        job.progressPercent = percent;
+      }
+      updateJob(job);
+    });
+
+    const analysisJsonPath = path.join(DATA_DIR, `${reportName}_analysis_data.json`);
+    fs.writeFileSync(analysisJsonPath, JSON.stringify(jsonData, null, 2), "utf-8");
+    console.log(`[Pipeline] Reanalysis saved: ${analysisJsonPath}`);
+
+    // Save updated context
+    if (context?.jdText || context?.cvText) {
+      saveReportContext(reportName, context?.jdText ?? null, context?.cvText ?? null);
+    }
+
+    // Done
+    job.status = "done";
+    job.progress = "重新分析完成";
+    job.result = reportName;
+    updateJob(job);
+  } catch (err: any) {
+    job.status = "error";
+    job.error = err.message || String(err);
+    job.progress = "重新分析失败";
+    updateJob(job);
+    throw err;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Audio pipeline (transcribe + analyze)
 // ═══════════════════════════════════════════════════════════════
 

@@ -13,7 +13,7 @@ import fs from "fs";
 import multer from "multer";
 import jwt from "jsonwebtoken";
 import { convertMdToJson } from "./convert.js";
-import { startPipeline, startTranscriptPipeline, getJob, getAllJobs, addJobListener, restoreJobs, type PipelineContext } from "./pipeline.js";
+import { startPipeline, startTranscriptPipeline, startReanalysis, getJob, getAllJobs, addJobListener, restoreJobs, type PipelineContext } from "./pipeline.js";
 import { getDurationMs } from "./transcribe.js";
 import authRouter, { requireAuth } from "./auth.js";
 import { getReportsByUser, userOwnsReport, getReportContext, setReportInterviewType, getReportInterviewType, getReportTags, addReportTag, removeReportTag, getAllTagsByUser, getReportUploadTime, getReportOriginalFilename, getReportDisplayName, setReportDisplayName, getTranscriptionQuotaMs, deductTranscriptionQuota } from "./db.js";
@@ -224,6 +224,54 @@ app.get("/api/reports/:name/context", requireAuth, (req, res) => {
     return;
   }
   res.json(context);
+});
+
+// POST /api/reports/:name/reanalyze - reanalyze with new JD/CV
+app.post("/api/reports/:name/reanalyze", requireAuth, audioUpload.fields([{ name: "cv", maxCount: 1 }]), async (req, res) => {
+  const name = sanitizeName(req.params.name);
+  if (!name) { res.status(400).json({ error: "Invalid report name" }); return; }
+  if (!userOwnsReport(req.user!.userId, name)) { res.status(403).json({ error: "Forbidden" }); return; }
+
+  // Check transcript exists
+  const transcriptPath = path.join(DATA_DIR, `${name}_transcript.json`);
+  if (!fs.existsSync(transcriptPath)) {
+    res.status(404).json({ error: "找不到转录数据，无法重新分析" });
+    return;
+  }
+
+  // Build context
+  const context: PipelineContext = {};
+
+  // Merge with existing context
+  const existingContext = getReportContext(name);
+
+  const jdText = typeof req.body.jdText === "string" ? req.body.jdText.trim().slice(0, 2000) : undefined;
+  if (jdText) {
+    context.jdText = jdText;
+  } else if (existingContext?.jd_text) {
+    context.jdText = existingContext.jd_text;
+  }
+
+  const files = req.files as Record<string, Express.Multer.File[]>;
+  const cvFile = files?.["cv"]?.[0];
+  if (cvFile) {
+    try {
+      const cvExt = path.extname(cvFile.originalname);
+      const rawCv = await extractCVText(cvFile.path, cvExt);
+      context.cvText = rawCv.slice(0, 5000);
+    } catch (err) {
+      console.error("[API] CV extraction error:", err);
+    } finally {
+      try { fs.unlinkSync(cvFile.path); } catch { /* ignore */ }
+    }
+  } else if (existingContext?.cv_text) {
+    context.cvText = existingContext.cv_text;
+  }
+
+  console.log(`[API] Reanalyze: ${name}${context.jdText ? " [+JD]" : ""}${context.cvText ? " [+CV]" : ""}`);
+  const jobId = startReanalysis(name, req.user!.userId, Object.keys(context).length > 0 ? context : undefined);
+
+  res.json({ jobId });
 });
 
 // PUT /api/reports/:name/type - set interview type

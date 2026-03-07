@@ -13,6 +13,13 @@ import {
   MessageCircle,
   ArrowLeft,
   Briefcase,
+  Upload,
+  FileText,
+  RefreshCw,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+  Info,
 } from 'lucide-react';
 import type { AnalysisReport, DialogueStep, TranscriptSegment } from '../types';
 import TranscriptChat from './TranscriptChat';
@@ -217,6 +224,388 @@ function getFocusLevelBadgeColor(level: string): "blue" | "green" | "amber" | "r
   return 'zinc';
 }
 
+// --- Reanalyze Panel ---
+
+const ReanalyzePanel: React.FC<{
+  reportName?: string;
+  hasExistingJD: boolean;
+  authFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}> = ({ reportName, hasExistingJD, authFetch }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [jdText, setJdText] = useState('');
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<string>('');
+
+  const handleSubmit = async () => {
+    if (!reportName) return;
+    if (!jdText.trim() && !cvFile) {
+      setError('请至少提供岗位JD或简历');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setProgress('提交中...');
+
+    try {
+      const formData = new FormData();
+      if (jdText.trim()) formData.append('jdText', jdText.trim());
+      if (cvFile) formData.append('cv', cvFile);
+
+      const res = await authFetch(`/api/reports/${encodeURIComponent(reportName)}/reanalyze`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: '请求失败' }));
+        throw new Error(data.error || '重新分析失败');
+      }
+
+      const { jobId: newJobId } = await res.json();
+
+      // Get SSE nonce
+      const nonceRes = await authFetch('/api/pipeline/nonce', { method: 'POST' });
+      const { nonce } = await nonceRes.json();
+
+      // Listen for progress via SSE
+      const es = new EventSource(`/api/pipeline/events/${newJobId}?nonce=${encodeURIComponent(nonce)}`);
+      es.onmessage = (event) => {
+        const job = JSON.parse(event.data);
+        setProgress(job.progress || '分析中...');
+        if (job.status === 'done') {
+          es.close();
+          setLoading(false);
+          setProgress('分析完成，正在刷新...');
+          // Reload the page to show updated data
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        } else if (job.status === 'error') {
+          es.close();
+          setLoading(false);
+          setError(job.error || '分析失败');
+        }
+      };
+      es.onerror = () => {
+        es.close();
+        setLoading(false);
+        setError('连接中断，请刷新页面查看结果');
+      };
+    } catch (err: any) {
+      setLoading(false);
+      setError(err.message || '提交失败');
+    }
+  };
+
+  if (!reportName) return null;
+
+  return (
+    <div className="mt-6">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        disabled={loading}
+        className="flex items-center gap-3 px-5 py-3 text-sm font-bold text-text-secondary bg-bg-base border border-border-main rounded-2xl hover:text-emerald-600 hover:border-emerald-400 transition-all"
+      >
+        <Upload size={16} />
+        {hasExistingJD ? '更新材料并重新分析' : '补充 JD / 简历，获得更精准的分析'}
+        {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+      </button>
+
+      {expanded && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          className="mt-4 bg-bg-surface rounded-2xl bento-shadow border border-border-main p-6 space-y-4"
+        >
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-text-secondary flex items-center gap-2">
+              <FileText size={14} /> 岗位描述（JD）
+            </label>
+            <textarea
+              value={jdText}
+              onChange={(e) => setJdText(e.target.value)}
+              placeholder="粘贴岗位描述文本..."
+              disabled={loading}
+              className="w-full h-32 px-4 py-3 text-sm bg-bg-base border border-border-main rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all disabled:opacity-50"
+              maxLength={2000}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-text-secondary flex items-center gap-2">
+              <Upload size={14} /> 简历文件（PDF / DOCX / TXT）
+            </label>
+            <input
+              type="file"
+              accept=".pdf,.docx,.doc,.txt"
+              onChange={(e) => setCvFile(e.target.files?.[0] || null)}
+              disabled={loading}
+              className="w-full text-sm text-text-secondary file:mr-4 file:py-2.5 file:px-5 file:rounded-full file:border-0 file:text-xs file:font-bold file:uppercase file:tracking-wider file:bg-emerald-50 dark:file:bg-emerald-900/20 file:text-emerald-700 dark:file:text-emerald-300 hover:file:bg-emerald-100 dark:hover:file:bg-emerald-900/30 file:cursor-pointer disabled:opacity-50 file:transition-colors"
+            />
+          </div>
+
+          {error && (
+            <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 flex items-center gap-2">
+              <AlertTriangle size={14} /> {error}
+            </div>
+          )}
+
+          {loading && progress && (
+            <div className="text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-3 flex items-center gap-2">
+              <Loader2 size={14} className="animate-spin" /> {progress}
+            </div>
+          )}
+
+          <button
+            onClick={handleSubmit}
+            disabled={loading || (!jdText.trim() && !cvFile)}
+            className="flex items-center gap-2 px-6 py-3 text-sm font-bold text-white bg-emerald-600 rounded-full hover:bg-emerald-700 shadow-lg shadow-emerald-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <><Loader2 size={16} className="animate-spin" /> 分析中...</>
+            ) : (
+              <><RefreshCw size={16} /> 重新分析</>
+            )}
+          </button>
+        </motion.div>
+      )}
+    </div>
+  );
+};
+
+// --- Position Section (always rendered) ---
+
+const PositionSection: React.FC<{
+  data: AnalysisReport;
+  positionNum: string;
+  reportName?: string;
+  authFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}> = ({ data, positionNum, reportName, authFetch }) => {
+  const [contextInfo, setContextInfo] = useState<{ jd_text: string | null; cv_text: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!reportName) return;
+    authFetch(`/api/reports/${encodeURIComponent(reportName)}/context`)
+      .then(res => res.ok ? res.json() : { jd_text: null, cv_text: null })
+      .then(ctx => setContextInfo(ctx))
+      .catch(() => setContextInfo({ jd_text: null, cv_text: null }));
+  }, [reportName, authFetch]);
+
+  const hasJD = !!contextInfo?.jd_text;
+  const isInferred = !hasJD;
+
+  return (
+    <Section id="position" title={`${positionNum}、岗位摘要`} icon={<Briefcase size={24} />}>
+      {/* Hint banner */}
+      {isInferred && (
+        <div className="mb-6 flex items-start gap-3 p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/50 text-sm text-blue-800 dark:text-blue-200 font-medium">
+          <Info size={18} className="shrink-0 mt-0.5 text-blue-500" />
+          <span>当前岗位分析基于面试对话内容推断。补充岗位 JD 和简历可获得更精准的分析结果。</span>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Left Card -- position profile */}
+        {data.positionSummary && (
+          <div className={`bg-bg-surface rounded-2xl bento-shadow border border-border-main p-6 space-y-6 ${!data.fitAnalysis ? 'md:col-span-2' : ''}`}>
+            <h3 className="text-lg font-bold text-text-primary">
+              {isInferred ? '岗位画像（推断）' : '岗位画像'}
+            </h3>
+
+            {/* responsibilities */}
+            <div className="space-y-3">
+              <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">
+                {isInferred ? '推断核心职责' : 'JD 核心职责'}
+              </span>
+              {data.positionSummary.responsibilities.map((r, i) => (
+                <div key={i} className="flex gap-4">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                  <span className="text-base text-text-primary font-medium">{r}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* interview actual work */}
+            {data.positionSummary.interviewActualWork && data.positionSummary.interviewActualWork.length > 0 && (
+              <div className="space-y-3">
+                <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">面试官口述实际工作</span>
+                {data.positionSummary.interviewActualWork.map((w, i) => (
+                  <div key={i} className="flex gap-4">
+                    <div className="w-2 h-2 rounded-full bg-blue-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.4)]" />
+                    <span className="text-base text-text-primary font-medium">{w}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* conflicts */}
+            {data.positionSummary.conflictsHighlighted && data.positionSummary.conflictsHighlighted.length > 0 &&
+              data.positionSummary.conflictsHighlighted.some(c => c !== '无明显冲突' && c !== '无JD对比') && (
+              <div className="space-y-3">
+                {data.positionSummary.conflictsHighlighted
+                  .filter(c => c !== '无明显冲突' && c !== '无JD对比')
+                  .map((conflict, i) => (
+                    <div key={i} className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start gap-3">
+                      <AlertTriangle size={18} className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                      <span className="text-base text-red-800 dark:text-red-200 font-medium">{conflict}</span>
+                    </div>
+                  ))}
+              </div>
+            )}
+
+            {/* hidden requirements */}
+            {data.positionSummary.hiddenRequirements && data.positionSummary.hiddenRequirements.length > 0 && (
+              <div className="space-y-3">
+                <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">隐藏要求</span>
+                {data.positionSummary.hiddenRequirements.map((req, i) => (
+                  <div key={i} className="flex gap-4">
+                    <div className="w-2 h-2 rounded-full bg-amber-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+                    <span className="text-base text-text-primary font-medium">{req}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* KPIs */}
+            {data.positionSummary.keyKPIs.length > 0 && (
+              <div className="space-y-3">
+                <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">关键 KPI</span>
+                {data.positionSummary.keyKPIs.map((kpi, i) => (
+                  <div key={i} className="flex gap-4">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2.5 shrink-0" />
+                    <span className="text-base text-text-primary font-medium">{kpi}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* work intensity, team, requirements */}
+            <div className="pt-4 border-t border-border-main space-y-4">
+              <div className="text-base">
+                <span className="font-bold text-text-secondary">工作强度：</span>
+                <span className="text-text-primary font-medium">{data.positionSummary.workIntensity}</span>
+              </div>
+              <div className="text-base">
+                <span className="font-bold text-text-secondary">团队文化：</span>
+                <span className="text-text-primary font-medium">{data.positionSummary.teamCulture}</span>
+              </div>
+              {data.positionSummary.requirements.length > 0 && (
+                <div className="space-y-3">
+                  <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">硬性要求</span>
+                  {data.positionSummary.requirements.map((r, i) => (
+                    <div key={i} className="flex gap-4">
+                      <div className="w-2 h-2 rounded-full bg-amber-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+                      <span className="text-base text-text-primary font-medium">{r}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {data.positionSummary.highlights && (
+              <div className="text-base bg-emerald-50 dark:bg-emerald-900/10 p-5 rounded-2xl border border-emerald-100 dark:border-emerald-800/50">
+                <span className="font-bold text-emerald-700 dark:text-emerald-300">亮点：</span>
+                <span className="text-emerald-900 dark:text-emerald-100 font-medium">{data.positionSummary.highlights}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Right Card -- fit analysis */}
+        {data.fitAnalysis && (
+          <div className={`bg-bg-surface rounded-2xl bento-shadow border border-border-main p-6 space-y-6 ${!data.positionSummary ? 'md:col-span-2' : ''}`}>
+            <h3 className="text-lg font-bold text-text-primary">
+              {isInferred ? '契合度（推断）' : '契合度'}
+            </h3>
+
+            <div className="text-center py-4">
+              <div className={`text-6xl font-black mb-2 ${
+                data.fitAnalysis.overallScore >= 80 ? 'text-emerald-600' :
+                data.fitAnalysis.overallScore >= 60 ? 'text-amber-500' :
+                'text-red-600'
+              }`}>
+                {data.fitAnalysis.overallScore}
+              </div>
+              <div className="text-xs font-bold text-text-secondary uppercase tracking-widest mb-3">综合契合度评分</div>
+              <p className="text-base text-text-primary leading-relaxed font-bold">
+                {data.fitAnalysis.recommendation}
+              </p>
+            </div>
+
+            {(data.fitAnalysis.hardSkillMatch || data.fitAnalysis.softSkillMatch || data.fitAnalysis.experienceRelevance) && (
+              <div className="space-y-4 pt-4 border-t border-border-main">
+                {data.fitAnalysis.hardSkillMatch && (
+                  <div className="text-base">
+                    <span className="font-bold text-text-secondary">硬技能匹配：</span>
+                    <span className="text-text-primary font-medium">{data.fitAnalysis.hardSkillMatch}</span>
+                  </div>
+                )}
+                {data.fitAnalysis.softSkillMatch && (
+                  <div className="text-base">
+                    <span className="font-bold text-text-secondary">软技能匹配：</span>
+                    <span className="text-text-primary font-medium">{data.fitAnalysis.softSkillMatch}</span>
+                  </div>
+                )}
+                {data.fitAnalysis.experienceRelevance && (
+                  <div className="text-base">
+                    <span className="font-bold text-text-secondary">经验相关度：</span>
+                    <span className="text-text-primary font-medium">{data.fitAnalysis.experienceRelevance}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="overflow-x-auto rounded-xl border border-border-main">
+              <Table
+                headers={['维度', isInferred ? '推断要求' : 'JD 要求', '候选人证据', '得分', '评价']}
+                rows={data.fitAnalysis.dimensions.map(d => [
+                  d.dimension,
+                  d.jdRequirement,
+                  d.candidateEvidence,
+                  <Badge color={d.score >= 80 ? 'green' : d.score >= 60 ? 'amber' : 'red'}>{d.score}</Badge>,
+                  d.comment,
+                ])}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <span className="text-sm font-bold text-emerald-600 uppercase tracking-wider">优势匹配</span>
+                {data.fitAnalysis.strengths.map((s, i) => (
+                  <div key={i} className="flex gap-3">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                    <span className="text-sm text-text-primary font-bold">{s}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-3">
+                <span className="text-sm font-bold text-amber-600 uppercase tracking-wider">待提升</span>
+                {data.fitAnalysis.gaps.map((g, i) => (
+                  <div key={i} className="flex gap-3">
+                    <div className="w-2 h-2 rounded-full bg-amber-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+                    <span className="text-sm text-text-primary font-bold">{g}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Reanalyze Panel */}
+      <ReanalyzePanel
+        reportName={reportName}
+        hasExistingJD={hasJD}
+        authFetch={authFetch}
+      />
+    </Section>
+  );
+};
+
 // --- Main Report Component ---
 
 interface ReportProps {
@@ -315,12 +704,12 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
               {(() => {
                 const chineseNumbers = ['一', '二', '三', '四', '五', '六', '七', '八'];
                 const navItems = [
-                  (data.positionSummary || data.fitAnalysis) ? { id: 'position', label: '岗位摘要', icon: Briefcase } : null,
+                  { id: 'position', label: '岗位摘要', icon: Briefcase },
                   { id: 'summary', label: '表现摘要', icon: CheckCircle2 },
                   { id: 'questions', label: '问题列表', icon: MessageSquare },
                   { id: 'chains', label: '对话链分析', icon: TrendingUp },
                   { id: 'focus', label: '关注图谱', icon: Target },
-                ].filter(Boolean) as { id: string; label: string; icon: React.FC<any> }[];
+                ];
                 return navItems.map((item, idx) => (
                   <a
                     key={item.id}
@@ -343,7 +732,7 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
               const chineseNumbers = ['一', '二', '三', '四', '五', '六', '七', '八'];
               let sectionIdx = 0;
               const nextNum = () => chineseNumbers[sectionIdx++];
-              const positionNum = (data.positionSummary || data.fitAnalysis) ? nextNum() : '';
+              const positionNum = nextNum();
               const summaryNum = nextNum();
               const questionsNum = nextNum();
               const chainsNum = nextNum();
@@ -351,196 +740,13 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
 
               return (<>
 
-            {/* Position Summary + Fit Analysis (merged) */}
-            {(data.positionSummary || data.fitAnalysis) && (
-              <Section id="position" title={`${positionNum}、岗位摘要`} icon={<Briefcase size={24} />}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Left Card — 岗位画像 */}
-                  {data.positionSummary && (
-                    <div className={`bg-bg-surface rounded-2xl bento-shadow border border-border-main p-6 space-y-6 ${!data.fitAnalysis ? 'md:col-span-2' : ''}`}>
-                      <h3 className="text-lg font-bold text-text-primary">岗位画像</h3>
-
-                      {/* JD 核心职责 */}
-                      <div className="space-y-3">
-                        <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">JD 核心职责</span>
-                        {data.positionSummary.responsibilities.map((r, i) => (
-                          <div key={i} className="flex gap-4">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                            <span className="text-base text-text-primary font-medium">{r}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* 面试官口述实际工作 */}
-                      {data.positionSummary.interviewActualWork && data.positionSummary.interviewActualWork.length > 0 && (
-                        <div className="space-y-3">
-                          <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">面试官口述实际工作</span>
-                          {data.positionSummary.interviewActualWork.map((w, i) => (
-                            <div key={i} className="flex gap-4">
-                              <div className="w-2 h-2 rounded-full bg-blue-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.4)]" />
-                              <span className="text-base text-text-primary font-medium">{w}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* 冲突高亮 */}
-                      {data.positionSummary.conflictsHighlighted && data.positionSummary.conflictsHighlighted.length > 0 &&
-                        data.positionSummary.conflictsHighlighted.some(c => c !== '无明显冲突') && (
-                        <div className="space-y-3">
-                          {data.positionSummary.conflictsHighlighted
-                            .filter(c => c !== '无明显冲突')
-                            .map((conflict, i) => (
-                              <div key={i} className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start gap-3">
-                                <AlertTriangle size={18} className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-                                <span className="text-base text-red-800 dark:text-red-200 font-medium">{conflict}</span>
-                              </div>
-                            ))}
-                        </div>
-                      )}
-
-                      {/* 隐藏要求 */}
-                      {data.positionSummary.hiddenRequirements && data.positionSummary.hiddenRequirements.length > 0 && (
-                        <div className="space-y-3">
-                          <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">隐藏要求</span>
-                          {data.positionSummary.hiddenRequirements.map((req, i) => (
-                            <div key={i} className="flex gap-4">
-                              <div className="w-2 h-2 rounded-full bg-amber-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
-                              <span className="text-base text-text-primary font-medium">{req}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* KPI 与目标 */}
-                      {data.positionSummary.keyKPIs.length > 0 && (
-                        <div className="space-y-3">
-                          <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">关键 KPI</span>
-                          {data.positionSummary.keyKPIs.map((kpi, i) => (
-                            <div key={i} className="flex gap-4">
-                              <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2.5 shrink-0" />
-                              <span className="text-base text-text-primary font-medium">{kpi}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* 工作强度、团队氛围、硬性要求 */}
-                      <div className="pt-4 border-t border-border-main space-y-4">
-                        <div className="text-base">
-                          <span className="font-bold text-text-secondary">工作强度：</span>
-                          <span className="text-text-primary font-medium">{data.positionSummary.workIntensity}</span>
-                        </div>
-                        <div className="text-base">
-                          <span className="font-bold text-text-secondary">团队文化：</span>
-                          <span className="text-text-primary font-medium">{data.positionSummary.teamCulture}</span>
-                        </div>
-                        {data.positionSummary.requirements.length > 0 && (
-                          <div className="space-y-3">
-                            <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">硬性要求</span>
-                            {data.positionSummary.requirements.map((r, i) => (
-                              <div key={i} className="flex gap-4">
-                                <div className="w-2 h-2 rounded-full bg-amber-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
-                                <span className="text-base text-text-primary font-medium">{r}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {data.positionSummary.highlights && (
-                        <div className="text-base bg-emerald-50 dark:bg-emerald-900/10 p-5 rounded-2xl border border-emerald-100 dark:border-emerald-800/50">
-                          <span className="font-bold text-emerald-700 dark:text-emerald-300">亮点：</span>
-                          <span className="text-emerald-900 dark:text-emerald-100 font-medium">{data.positionSummary.highlights}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Right Card — 契合度 */}
-                  {data.fitAnalysis && (
-                    <div className={`bg-bg-surface rounded-2xl bento-shadow border border-border-main p-6 space-y-6 ${!data.positionSummary ? 'md:col-span-2' : ''}`}>
-                      <h3 className="text-lg font-bold text-text-primary">契合度</h3>
-
-                      {/* Overall Score + Recommendation */}
-                      <div className="text-center py-4">
-                        <div className={`text-6xl font-black mb-2 ${
-                          data.fitAnalysis.overallScore >= 80 ? 'text-emerald-600' :
-                          data.fitAnalysis.overallScore >= 60 ? 'text-amber-500' :
-                          'text-red-600'
-                        }`}>
-                          {data.fitAnalysis.overallScore}
-                        </div>
-                        <div className="text-xs font-bold text-text-secondary uppercase tracking-widest mb-3">综合契合度评分</div>
-                        <p className="text-base text-text-primary leading-relaxed font-bold">
-                          {data.fitAnalysis.recommendation}
-                        </p>
-                      </div>
-
-                      {/* Hard/Soft Skill Match + Experience Relevance */}
-                      {(data.fitAnalysis.hardSkillMatch || data.fitAnalysis.softSkillMatch || data.fitAnalysis.experienceRelevance) && (
-                        <div className="space-y-4 pt-4 border-t border-border-main">
-                          {data.fitAnalysis.hardSkillMatch && (
-                            <div className="text-base">
-                              <span className="font-bold text-text-secondary">硬技能匹配：</span>
-                              <span className="text-text-primary font-medium">{data.fitAnalysis.hardSkillMatch}</span>
-                            </div>
-                          )}
-                          {data.fitAnalysis.softSkillMatch && (
-                            <div className="text-base">
-                              <span className="font-bold text-text-secondary">软技能匹配：</span>
-                              <span className="text-text-primary font-medium">{data.fitAnalysis.softSkillMatch}</span>
-                            </div>
-                          )}
-                          {data.fitAnalysis.experienceRelevance && (
-                            <div className="text-base">
-                              <span className="font-bold text-text-secondary">经验相关度：</span>
-                              <span className="text-text-primary font-medium">{data.fitAnalysis.experienceRelevance}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Dimensions Table */}
-                      <div className="overflow-x-auto rounded-xl border border-border-main">
-                        <Table
-                          headers={['维度', 'JD 要求', '候选人证据', '得分', '评价']}
-                          rows={data.fitAnalysis.dimensions.map(d => [
-                            d.dimension,
-                            d.jdRequirement,
-                            d.candidateEvidence,
-                            <Badge color={d.score >= 80 ? 'green' : d.score >= 60 ? 'amber' : 'red'}>{d.score}</Badge>,
-                            d.comment,
-                          ])}
-                        />
-                      </div>
-
-                      {/* Strengths & Gaps */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-3">
-                          <span className="text-sm font-bold text-emerald-600 uppercase tracking-wider">优势匹配</span>
-                          {data.fitAnalysis.strengths.map((s, i) => (
-                            <div key={i} className="flex gap-3">
-                              <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                              <span className="text-sm text-text-primary font-bold">{s}</span>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="space-y-3">
-                          <span className="text-sm font-bold text-amber-600 uppercase tracking-wider">待提升</span>
-                          {data.fitAnalysis.gaps.map((g, i) => (
-                            <div key={i} className="flex gap-3">
-                              <div className="w-2 h-2 rounded-full bg-amber-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
-                              <span className="text-sm text-text-primary font-bold">{g}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </Section>
-            )}
+            {/* Position Summary + Fit Analysis (always shown) */}
+            <PositionSection
+              data={data}
+              positionNum={positionNum}
+              reportName={reportName}
+              authFetch={authFetch}
+            />
 
             {/* Candidate Summary */}
             <Section id="summary" title={`${summaryNum}、候选人表现摘要`} icon={<CheckCircle2 size={24} />}>

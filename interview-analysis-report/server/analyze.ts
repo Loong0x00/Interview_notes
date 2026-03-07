@@ -75,7 +75,8 @@ const BASE_JSON_SCHEMA = `{
 // JSON Schema — JD 模块（有 JD 时追加）
 // ═══════════════════════════════════════════════════════════════
 
-const JD_JSON_SCHEMA = `,
+// Schema when JD is provided
+const JD_JSON_SCHEMA_WITH_JD = `,
   "positionSummary": {
     "responsibilities": ["JD中列出的核心职责1", "核心职责2"],
     "interviewActualWork": ["面试官口述的实际日常工作1", "实际工作2"],
@@ -101,6 +102,38 @@ const JD_JSON_SCHEMA = `,
     "hardSkillMatch": "硬技能匹配分析（专业技能、工具使用）",
     "softSkillMatch": "软技能匹配分析（沟通表达、抗压、协作）",
     "experienceRelevance": "过往经验相关度（行业、项目规模匹配）",
+    "strengths": ["优势匹配点1"],
+    "gaps": ["差距1"],
+    "recommendation": "强烈推荐/推荐/待定/不推荐"
+  }`;
+
+// Schema when NO JD — infer from conversation
+const JD_JSON_SCHEMA_NO_JD = `,
+  "positionSummary": {
+    "responsibilities": ["从面试对话中推断的岗位核心职责1", "核心职责2"],
+    "interviewActualWork": ["面试官口述的实际日常工作1", "实际工作2"],
+    "conflictsHighlighted": ["无JD对比"],
+    "hiddenRequirements": ["从面试对话中推断的隐藏要求"],
+    "workIntensity": "从对话推断的工作强度",
+    "keyKPIs": ["从对话推断的KPI"],
+    "teamCulture": "从对话推断的团队氛围",
+    "requirements": ["从对话推断的硬性要求"],
+    "highlights": "从对话推断的岗位亮点"
+  },
+  "fitAnalysis": {
+    "overallScore": 75,
+    "dimensions": [
+      {
+        "dimension": "维度名称",
+        "jdRequirement": "从对话推断的岗位要求",
+        "candidateEvidence": "候选人面试证据",
+        "score": 80,
+        "comment": "一句话评价"
+      }
+    ],
+    "hardSkillMatch": "硬技能匹配分析",
+    "softSkillMatch": "软技能匹配分析",
+    "experienceRelevance": "经验相关度分析",
     "strengths": ["优势匹配点1"],
     "gaps": ["差距1"],
     "recommendation": "强烈推荐/推荐/待定/不推荐"
@@ -188,7 +221,7 @@ const BASE_STEPS = `你是一位资深的面试行为学专家与数据分析师
 // Prompt Module B — JD 岗位画像（有 JD 时激活）
 // ═══════════════════════════════════════════════════════════════
 
-const STEP_JD = `
+const STEP_JD_WITH_JD = `
 
 ### Step 7：岗位画像分析（基于JD）
 从提供的岗位描述（JD）中提取以下信息：
@@ -202,11 +235,25 @@ const STEP_JD = `
 - 硬性要求：学历、技能、经验等门槛
 - JD亮点：特殊福利、发展机会等`;
 
+const STEP_JD_NO_JD = `
+
+### Step 7：岗位画像分析（基于面试对话推断）
+没有提供岗位JD，需要从面试对话中推断岗位信息：
+- **核心职责**：从面试官的提问方向、描述的工作内容中推断该岗位的核心职责
+- **面试官口述的实际工作**：面试官在对话中提到的具体工作内容、项目、团队情况
+- **冲突高亮**：固定填 ["无JD对比"]
+- **隐藏要求**：从面试官的追问重点、反应态度中推断的隐性要求
+- 工作强度：从对话语境推断的工作节奏
+- 主要KPI：从面试官关注的能力维度推断的考核重点
+- 团队氛围：从面试官的沟通风格和描述推断
+- 硬性要求：从面试官的提问中推断的门槛要求
+- 亮点：从对话中捕捉到的岗位吸引力`;
+
 // ═══════════════════════════════════════════════════════════════
 // Prompt Module C — 契合度分析（有 JD 或 CV 时激活）
 // ═══════════════════════════════════════════════════════════════
 
-const STEP_FIT = `
+const STEP_FIT_WITH_JD = `
 
 ### Step 8：契合度分析
 基于JD要求和候选人在面试中的实际表现，进行多维度人岗匹配分析：
@@ -220,23 +267,36 @@ const STEP_FIT = `
 
 注意：fitAnalysis模块总字数控制精炼，一针见血，不要啰嗦。`;
 
+const STEP_FIT_NO_JD = `
+
+### Step 8：契合度分析（基于对话推断）
+没有JD，基于Step 7推断的岗位要求和候选人在面试中的表现进行匹配分析：
+- **维度拆分**：对推断出的每个核心岗位要求，在面试对话中找到候选人展现的对应证据，给出0-100的匹配分数
+- **jdRequirement字段**：填写从对话推断的岗位要求（而非JD原文）
+- **硬技能匹配**：基于面试官追问深度和候选人回答质量评估（一句话总结）
+- **软技能匹配**：基于对话中展现的沟通、应变能力评估（一句话总结）
+- **经验相关度**：基于候选人描述的经历与推断岗位需求的匹配度（一句话总结）
+- **优势与差距**：总结优势和待提升点
+- **综合推荐**："强烈推荐"/"推荐"/"待定"/"不推荐"之一
+- **overallScore**：所有维度分数的加权平均
+
+注意：fitAnalysis模块总字数控制精炼，一针见血，不要啰嗦。`;
+
 // ═══════════════════════════════════════════════════════════════
 // Prompt 组装器
 // ═══════════════════════════════════════════════════════════════
 
 function buildSystemPrompt(options?: { hasJD?: boolean; hasCV?: boolean }): string {
-  // 拼接分析步骤
-  let steps = BASE_STEPS;
-  if (options?.hasJD) {
-    steps += STEP_JD;
-    steps += STEP_FIT;
-  }
+  const hasJD = !!options?.hasJD;
 
-  // 拼接 JSON schema
+  // 拼接分析步骤 — 始终包含岗位画像和契合度
+  let steps = BASE_STEPS;
+  steps += hasJD ? STEP_JD_WITH_JD : STEP_JD_NO_JD;
+  steps += hasJD ? STEP_FIT_WITH_JD : STEP_FIT_NO_JD;
+
+  // 拼接 JSON schema — 始终包含 positionSummary 和 fitAnalysis
   let jsonSchema = BASE_JSON_SCHEMA;
-  if (options?.hasJD) {
-    jsonSchema += JD_JSON_SCHEMA;
-  }
+  jsonSchema += hasJD ? JD_JSON_SCHEMA_WITH_JD : JD_JSON_SCHEMA_NO_JD;
   jsonSchema += "\n}";
 
   return `${steps}
@@ -272,15 +332,15 @@ ${jsonSchema}
   - suggestions: 下次面试的具体改进建议（数组）
   - points: 关键考察要点
   - coreQuestion: 核心问题总结
-- candidateSummary: 候选人背景、能力、风险点${options?.hasJD ? `
-- positionSummary: 岗位画像
-  - interviewActualWork: 面试官口述的实际工作内容（可能与JD不同）
-  - conflictsHighlighted: JD与面试实际的冲突点（若无冲突填["无明显冲突"]）
-  - hiddenRequirements: JD未写但面试暴露的隐藏要求（若无则填空数组）
+- candidateSummary: 候选人背景、能力、风险点
+- positionSummary: 岗位画像${hasJD ? "（基于JD）" : "（基于面试对话推断）"}
+  - interviewActualWork: 面试官口述的实际工作内容
+  - conflictsHighlighted: ${hasJD ? "JD与面试实际的冲突点（若无冲突填[\"无明显冲突\"]）" : "固定填[\"无JD对比\"]"}
+  - hiddenRequirements: ${hasJD ? "JD未写但面试暴露的隐藏要求（若无则填空数组）" : "从面试对话中推断的隐性要求"}
 - fitAnalysis: 人岗契合度
   - hardSkillMatch/softSkillMatch/experienceRelevance: 各一句话精炼总结
-  - dimensions: 各维度评分
-  - overallScore: 加权平均分` : ""}
+  - dimensions: 各维度评分${hasJD ? "" : "，jdRequirement字段填写从对话推断的岗位要求"}
+  - overallScore: 加权平均分
 
 ## 重要要求
 
