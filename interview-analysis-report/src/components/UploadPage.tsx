@@ -65,6 +65,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [showContext, setShowContext] = useState(false);
   const [interviewType, setInterviewType] = useState("");
+  const [quotaMin, setQuotaMin] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cvInputRef = useRef<HTMLInputElement>(null);
 
@@ -73,8 +74,13 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
   const getStepIndex = mode === "audio" ? getAudioStepIndex : getTranscriptStepIndex;
   const acceptFormats = mode === "audio" ? AUDIO_ACCEPT_FORMATS : TRANSCRIPT_ACCEPT_FORMATS;
 
-  // Resume in-progress job on mount
+  // Fetch quota + resume in-progress job on mount
   useEffect(() => {
+    authFetch('/api/user/quota')
+      .then(res => res.json())
+      .then((data: { transcriptionQuotaMin: number }) => setQuotaMin(data.transcriptionQuotaMin))
+      .catch(() => {});
+
     authFetch('/api/pipeline/jobs')
       .then(res => res.json())
       .then((jobs: Array<{ id: string; fileName: string; status: string; progress: string; result?: string; error?: string }>) => {
@@ -328,27 +334,34 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
 
             {/* Upload Type Toggle — pill style */}
             {!job && (
-              <div className="flex bg-bg-surface bento-shadow border border-border-main p-1.5 rounded-full w-fit">
-                <button
-                  onClick={() => switchMode("audio")}
-                  className={`px-8 py-3 rounded-full text-sm font-bold transition-all ${
-                    mode === "audio"
-                      ? "bg-emerald-600 shadow-lg shadow-emerald-500/20 text-white"
-                      : "text-text-secondary hover:text-text-primary"
-                  }`}
-                >
-                  面试录音
-                </button>
-                <button
-                  onClick={() => switchMode("transcript")}
-                  className={`px-8 py-3 rounded-full text-sm font-bold transition-all ${
-                    mode === "transcript"
-                      ? "bg-emerald-600 shadow-lg shadow-emerald-500/20 text-white"
-                      : "text-text-secondary hover:text-text-primary"
-                  }`}
-                >
-                  面试逐字稿
-                </button>
+              <div className="flex items-center gap-4">
+                <div className="flex bg-bg-surface bento-shadow border border-border-main p-1.5 rounded-full w-fit">
+                  <button
+                    onClick={() => switchMode("audio")}
+                    className={`px-8 py-3 rounded-full text-sm font-bold transition-all ${
+                      mode === "audio"
+                        ? "bg-emerald-600 shadow-lg shadow-emerald-500/20 text-white"
+                        : "text-text-secondary hover:text-text-primary"
+                    }`}
+                  >
+                    面试录音
+                  </button>
+                  <button
+                    onClick={() => switchMode("transcript")}
+                    className={`px-8 py-3 rounded-full text-sm font-bold transition-all ${
+                      mode === "transcript"
+                        ? "bg-emerald-600 shadow-lg shadow-emerald-500/20 text-white"
+                        : "text-text-secondary hover:text-text-primary"
+                    }`}
+                  >
+                    面试逐字稿
+                  </button>
+                </div>
+                {mode === "audio" && quotaMin !== null && (
+                  <span className={`text-xs font-medium ${quotaMin <= 10 ? 'text-red-500' : 'text-text-tertiary'}`}>
+                    转写余量 {quotaMin >= 1440 ? '不限' : `${quotaMin} 分钟`}
+                  </span>
+                )}
               </div>
             )}
 
