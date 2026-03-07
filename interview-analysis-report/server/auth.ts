@@ -4,11 +4,14 @@ import jwt from "jsonwebtoken";
 import {
   getUserByUsername,
   createUser,
-  getInviteCode,
-  markInviteCodeUsed,
+  isInviteCodeUsed,
+  markInviteUsed,
+  getLegacyInviteCode,
+  markLegacyInviteCodeUsed,
   getUserCount,
   migrateOrphanReports,
 } from "./db.js";
+import { verifyInviteCode } from "./lib/invite.js";
 
 const router = Router();
 
@@ -64,11 +67,30 @@ router.post("/register", async (req: Request, res: Response) => {
     return;
   }
 
-  // Check invite code
-  const code = getInviteCode(inviteCode);
-  if (!code || code.used_by !== null) {
-    res.status(400).json({ error: "Invalid or already used invite code" });
-    return;
+  // Verify invite code: try Ed25519 first, fallback to legacy DB codes
+  let inviteId: string | undefined;
+  let isLegacy = false;
+
+  const publicKeyPem = (process.env.INVITE_PUBLIC_KEY ?? "").replace(/\\n/g, "\n");
+  if (publicKeyPem) {
+    const verification = verifyInviteCode(publicKeyPem, inviteCode);
+    if (verification.valid) {
+      if (isInviteCodeUsed(verification.id!)) {
+        res.status(400).json({ error: "Invite code already used" });
+        return;
+      }
+      inviteId = verification.id!;
+    }
+  }
+
+  // Fallback: check legacy plain-text invite codes
+  if (!inviteId) {
+    const legacyCode = getLegacyInviteCode(inviteCode);
+    if (!legacyCode || legacyCode.used_by !== null) {
+      res.status(400).json({ error: "Invalid or already used invite code" });
+      return;
+    }
+    isLegacy = true;
   }
 
   // Check username uniqueness
@@ -79,7 +101,12 @@ router.post("/register", async (req: Request, res: Response) => {
 
   const passwordHash = await bcrypt.hash(password, 10);
   const userId = createUser(username, passwordHash);
-  markInviteCodeUsed(inviteCode, userId);
+
+  if (isLegacy) {
+    markLegacyInviteCodeUsed(inviteCode, userId);
+  } else {
+    markInviteUsed(inviteId!, userId);
+  }
 
   // If first user, migrate orphan reports
   if (getUserCount() === 1) {

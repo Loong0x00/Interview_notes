@@ -67,16 +67,15 @@ db.exec(`
   );
 `);
 
-// Pre-seed invite codes (ignore if already exist)
-const insertCode = db.prepare(
-  "INSERT OR IGNORE INTO invite_codes (code) VALUES (?)"
-);
-const seedCodes = db.transaction(() => {
-  for (const suffix of ["ALPHA", "BETA", "GAMMA", "DELTA", "EPSILON"]) {
-    insertCode.run(`INVITE-${suffix}`);
-  }
-});
-seedCodes();
+// ── used_invite_codes table (for Ed25519 invite code replay prevention) ──
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS used_invite_codes (
+    id TEXT PRIMARY KEY,
+    used_by INTEGER NOT NULL REFERENCES users(id),
+    used_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`);
 
 // ── User helpers ──
 
@@ -111,7 +110,22 @@ export function getUserCount(): number {
   return row.cnt;
 }
 
-// ── Invite code helpers ──
+// ── Used invite code helpers (Ed25519 replay prevention) ──
+
+export function isInviteCodeUsed(id: string): boolean {
+  const row = db
+    .prepare("SELECT 1 FROM used_invite_codes WHERE id = ?")
+    .get(id);
+  return !!row;
+}
+
+export function markInviteUsed(id: string, userId: number): void {
+  db.prepare(
+    "INSERT INTO used_invite_codes (id, used_by) VALUES (?, ?)"
+  ).run(id, userId);
+}
+
+// ── Legacy invite code helpers (for pre-existing plain-text codes) ──
 
 export interface DbInviteCode {
   id: number;
@@ -120,13 +134,13 @@ export interface DbInviteCode {
   created_at: string;
 }
 
-export function getInviteCode(code: string): DbInviteCode | undefined {
+export function getLegacyInviteCode(code: string): DbInviteCode | undefined {
   return db
     .prepare("SELECT * FROM invite_codes WHERE code = ?")
     .get(code) as DbInviteCode | undefined;
 }
 
-export function markInviteCodeUsed(code: string, userId: number): void {
+export function markLegacyInviteCodeUsed(code: string, userId: number): void {
   db.prepare("UPDATE invite_codes SET used_by = ? WHERE code = ?").run(
     userId,
     code
