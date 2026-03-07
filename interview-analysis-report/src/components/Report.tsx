@@ -912,7 +912,7 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
                       <div
                         key={i}
                         onClick={() => q.timestamp && handleQuestionClick(q.timestamp)}
-                        className={`flex items-center gap-4 px-6 py-4 transition-all duration-200 ${q.timestamp ? 'cursor-pointer hover:bg-emerald-50/40 dark:hover:bg-emerald-900/10' : 'hover:bg-bg-base/40'}`}
+                        className={`flex flex-wrap md:flex-nowrap items-center gap-3 md:gap-4 px-4 md:px-6 py-4 transition-all duration-200 ${q.timestamp ? 'cursor-pointer hover:bg-emerald-50/40 dark:hover:bg-emerald-900/10' : 'hover:bg-bg-base/40'}`}
                       >
                         <span className="shrink-0 w-12 text-center px-2 py-1 rounded-full bg-emerald-600 text-white text-xs font-bold">{q.id}</span>
                         <Badge color={getQuestionBadgeColor(q.type)}>{q.type}</Badge>
@@ -978,15 +978,36 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
             <Section id="focus" title={`${focusNum}、面试官关注图谱`} icon={<Target size={24} />}>
               <Card className="mb-8">
                 <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 font-bold text-text-primary">话题深度热力图</div>
-                <Table
-                  headers={['话题', '追问层数', '涉及问题', '关注等级']}
-                  rows={focusMap.topics.map(t => [
-                    t.topic,
-                    t.depth,
-                    t.questions,
-                    <Badge color={getFocusLevelBadgeColor(t.level)}>{t.level}</Badge>,
-                  ])}
-                />
+                {/* Desktop: table */}
+                <div className="hidden md:block">
+                  <Table
+                    headers={['话题', '追问层数', '涉及问题', '关注等级']}
+                    rows={focusMap.topics.map(t => [
+                      t.topic,
+                      t.depth,
+                      t.questions,
+                      <Badge color={getFocusLevelBadgeColor(t.level)}>{t.level}</Badge>,
+                    ])}
+                  />
+                </div>
+                {/* Mobile: collapsible cards */}
+                <div className="md:hidden divide-y divide-border-main">
+                  {focusMap.topics.map((t, i) => (
+                    <details key={i} className="group">
+                      <summary className="flex items-center justify-between px-6 py-4 cursor-pointer list-none">
+                        <div className="flex items-center gap-3">
+                          <span className="font-bold text-text-primary text-sm">{t.topic}</span>
+                          <Badge color={getFocusLevelBadgeColor(t.level)}>{t.level}</Badge>
+                        </div>
+                        <ChevronDown size={16} className="text-text-secondary transition-transform group-open:rotate-180" />
+                      </summary>
+                      <div className="px-6 pb-4 space-y-2 text-sm">
+                        <div><span className="font-bold text-text-secondary">追问层数：</span><span className="text-text-primary">{t.depth}</span></div>
+                        <div><span className="font-bold text-text-secondary">涉及问题：</span><span className="text-text-primary">{t.questions}</span></div>
+                      </div>
+                    </details>
+                  ))}
+                </div>
               </Card>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
