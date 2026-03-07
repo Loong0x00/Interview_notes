@@ -67,8 +67,8 @@ export default function RegisterPage({ onGoLogin }: RegisterPageProps) {
               <input
                 type="text"
                 value={inviteCode}
-                onChange={e => setInviteCode(e.target.value.toUpperCase())}
-                placeholder="INVITE-XXXXX"
+                onChange={e => setInviteCode(e.target.value.trim())}
+                placeholder="粘贴邀请码"
                 required
                 className="w-full px-4 py-3 border border-border-main rounded-2xl text-base font-mono bg-bg-base text-text-primary focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none transition-all"
               />
