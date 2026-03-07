@@ -13,7 +13,7 @@ import fs from "fs";
 import multer from "multer";
 import jwt from "jsonwebtoken";
 import { convertMdToJson } from "./convert.js";
-import { startPipeline, startTranscriptPipeline, startReanalysis, getJob, getAllJobs, addJobListener, restoreJobs, type PipelineContext } from "./pipeline.js";
+import { startPipeline, startTranscriptPipeline, startReanalysis, getJob, getAllJobs, addJobListener, cancelJob, restoreJobs, type PipelineContext } from "./pipeline.js";
 import { getDurationMs } from "./transcribe.js";
 import authRouter, { requireAuth } from "./auth.js";
 import { getReportsByUser, userOwnsReport, getReportContext, setReportInterviewType, getReportInterviewType, getReportTags, addReportTag, removeReportTag, getAllTagsByUser, getReportUploadTime, getReportOriginalFilename, getReportDisplayName, setReportDisplayName, getTranscriptionQuotaMs, deductTranscriptionQuota } from "./db.js";
@@ -482,6 +482,17 @@ app.post("/api/pipeline/start-transcript", requireAuth, transcriptUpload.fields(
   const jobId = startTranscriptPipeline(filePath, originalName, req.user!.userId, Object.keys(context).length > 0 ? context : undefined);
 
   res.json({ jobId });
+});
+
+// POST /api/pipeline/cancel/:id - cancel a running job
+app.post("/api/pipeline/cancel/:id", requireAuth, (req, res) => {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const job = getJob(id);
+  if (!job) { res.status(404).json({ error: "Job not found" }); return; }
+  if (job.userId !== req.user!.userId) { res.status(403).json({ error: "Forbidden" }); return; }
+  const cancelled = cancelJob(id);
+  if (!cancelled) { res.status(400).json({ error: "Job already finished" }); return; }
+  res.json({ ok: true });
 });
 
 // GET /api/user/quota - get remaining transcription quota

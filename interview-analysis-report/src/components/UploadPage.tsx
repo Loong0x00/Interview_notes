@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, FileAudio, FileText, CheckCircle, AlertCircle, Loader, Sun, Moon, ArrowLeft } from "lucide-react";
+import { Upload, FileAudio, FileText, CheckCircle, AlertCircle, Loader, Sun, Moon, ArrowLeft, XCircle } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -68,6 +68,9 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
   const [quotaMin, setQuotaMin] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cvInputRef = useRef<HTMLInputElement>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
+
+  const isLocked = uploading || (job !== null && job.status !== "error" && job.status !== "done");
 
   const steps = mode === "audio" ? AUDIO_STEPS : TRANSCRIPT_STEPS;
   const totalSteps = steps.length;
@@ -109,6 +112,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
     }
 
     const evtSource = new EventSource(`/api/pipeline/events/${jobId}?nonce=${encodeURIComponent(nonce)}`);
+    eventSourceRef.current = evtSource;
 
     evtSource.onmessage = (event) => {
       const data: JobState = JSON.parse(event.data);
@@ -228,6 +232,17 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
     }
   }, [file, mode, onComplete, authFetch]);
 
+  const cancelCurrentJob = useCallback(async () => {
+    if (!job?.id) return;
+    eventSourceRef.current?.close();
+    eventSourceRef.current = null;
+    try {
+      await authFetch(`/api/pipeline/cancel/${job.id}`, { method: "POST" });
+    } catch { /* ignore */ }
+    setJob(null);
+    setUploading(false);
+  }, [job, authFetch]);
+
   const stepIndex = job ? getStepIndex(job.status) : -2;
 
   const FileIcon = mode === "audio" ? FileAudio : FileText;
@@ -276,7 +291,8 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                 value={jdText}
                 onChange={(e) => { if (e.target.value.length <= 2000) setJdText(e.target.value); }}
                 placeholder="粘贴岗位描述..."
-                className="w-full h-48 p-5 bg-bg-base border border-border-main rounded-2xl text-base text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all resize-none"
+                disabled={isLocked}
+                className={`w-full h-48 p-5 bg-bg-base border border-border-main rounded-2xl text-base text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all resize-none ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
               />
               {jdText.length > 0 && (
                 <p className={`text-xs text-right ${jdText.length >= 1800 ? 'text-red-500' : 'text-text-tertiary'}`}>
@@ -292,8 +308,8 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                 <p className="text-sm text-text-secondary mt-1">支持 PDF、Word 格式</p>
               </div>
               <div
-                onClick={() => cvInputRef.current?.click()}
-                className="relative group border-2 border-dashed border-border-main rounded-2xl p-8 transition-all hover:border-emerald-500 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10 cursor-pointer bg-bg-base flex flex-col items-center justify-center space-y-3"
+                onClick={() => !isLocked && cvInputRef.current?.click()}
+                className={`relative group border-2 border-dashed border-border-main rounded-2xl p-8 transition-all bg-bg-base flex flex-col items-center justify-center space-y-3 ${isLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10'}`}
               >
                 <input
                   ref={cvInputRef}
@@ -500,11 +516,20 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                   })}
                 </div>
 
-                {/* File info when job is active */}
+                {/* File info + cancel button when job is active */}
                 {job && job.status !== "error" && job.status !== "done" && (
-                  <p className="text-xs font-medium text-text-secondary pt-4 border-t border-border-main truncate">
-                    正在处理：{file?.name || resumedFileName || ''}
-                  </p>
+                  <div className="pt-4 border-t border-border-main space-y-3">
+                    <p className="text-xs font-medium text-text-secondary truncate">
+                      正在处理：{file?.name || resumedFileName || ''}
+                    </p>
+                    <button
+                      onClick={cancelCurrentJob}
+                      className="w-full py-2.5 text-xs font-bold bg-bg-base border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-all flex items-center justify-center gap-2"
+                    >
+                      <XCircle className="w-4 h-4" />
+                      终止任务
+                    </button>
+                  </div>
                 )}
 
                 {/* Done State */}
@@ -549,7 +574,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
 
             {/* Upload Button */}
             {file && !job && (
-              <div className="flex justify-center pt-4">
+              <div className="flex flex-col items-center gap-3 pt-4">
                 <button
                   onClick={startUpload}
                   disabled={uploading}
@@ -569,6 +594,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                     </>
                   )}
                 </button>
+                <p className="text-xs text-text-tertiary">请确认信息无误后再提交，每次分析会消耗 AI 额度</p>
               </div>
             )}
           </div>

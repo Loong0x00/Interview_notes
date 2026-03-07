@@ -54,6 +54,16 @@ export function getAllJobs(userId?: number): PipelineJob[] {
   return all.sort((a, b) => b.createdAt - a.createdAt);
 }
 
+export function cancelJob(id: string): boolean {
+  const job = jobs.get(id);
+  if (!job || job.status === "done" || job.status === "error") return false;
+  job.status = "error";
+  job.error = "用户取消";
+  job.progress = "已取消";
+  updateJob(job);
+  return true;
+}
+
 export function addJobListener(jobId: string, listener: ProgressListener): () => void {
   if (!listeners.has(jobId)) {
     listeners.set(jobId, new Set());
