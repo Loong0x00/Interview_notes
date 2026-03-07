@@ -40,6 +40,11 @@ export async function parseTranscriptFile(filePath: string, ext: string): Promis
     }
   }
 
+  // Check character limit before expensive AI fallback
+  if (content.length > 30000) {
+    throw new Error(`逐字稿超出字数限制：${content.length} 字（上限 30000 字）`);
+  }
+
   // AI fallback: if deterministic parsing yields <3 segments from a substantial file
   if (segments.length < 3 && content.length > 200) {
     console.log(`[parseTranscript] Only ${segments.length} segments from ${content.length} chars, trying AI fallback...`);
