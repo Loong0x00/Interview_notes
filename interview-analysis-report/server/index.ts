@@ -404,6 +404,14 @@ app.post("/api/pipeline/start-transcript", requireAuth, transcriptUpload.fields(
   const filePath = transcriptFile.path;
   const originalName = Buffer.from(transcriptFile.originalname, "latin1").toString("utf-8");
 
+  // Pre-check file size (rough char estimate: 1 byte ≈ 1 char for CJK in UTF-8 is ~3 bytes, so 90KB ≈ 30000 CJK chars)
+  const fileSize = transcriptFile.size;
+  if (fileSize > 300000) {  // 300KB safety limit
+    try { fs.unlinkSync(filePath); } catch { /* ignore */ }
+    res.status(400).json({ error: `文件过大（${(fileSize / 1024).toFixed(0)}KB），逐字稿上限约 30000 字` });
+    return;
+  }
+
   // Build context from JD text and CV file
   const context: PipelineContext = {};
   const jdText = typeof req.body.jdText === "string" ? req.body.jdText.trim().slice(0, 2000) : undefined;
