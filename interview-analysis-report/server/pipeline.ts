@@ -388,7 +388,7 @@ async function runPipeline(
         }
 
         job.status = "transcribing";
-        job.progress = "[1/2] 语音转写 - 命中缓存 ✓";
+        job.progress = "[1/2] 语音转写 - 完成";
         job.progressPercent = 100;
         updateJob(job);
       } else {
