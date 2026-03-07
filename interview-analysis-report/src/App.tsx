@@ -213,6 +213,7 @@ function AppInner() {
         data={selectedReport}
         reportName={selectedReportName ?? undefined}
         onBack={() => { setSelectedReport(null); setSelectedReportName(null); setView('list'); }}
+        onReloadReport={() => { if (selectedReportName) loadReport(selectedReportName); }}
       />
     );
   }

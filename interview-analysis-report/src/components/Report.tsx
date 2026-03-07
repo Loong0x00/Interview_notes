@@ -230,7 +230,8 @@ const ReanalyzePanel: React.FC<{
   reportName?: string;
   hasExistingJD: boolean;
   authFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}> = ({ reportName, hasExistingJD, authFetch }) => {
+  onReloadReport?: () => void;
+}> = ({ reportName, hasExistingJD, authFetch, onReloadReport }) => {
   const [expanded, setExpanded] = useState(false);
   const [jdText, setJdText] = useState('');
   const [cvFile, setCvFile] = useState<File | null>(null);
@@ -279,9 +280,12 @@ const ReanalyzePanel: React.FC<{
           es.close();
           setLoading(false);
           setProgress('分析完成，正在刷新...');
-          // Reload the page to show updated data
           setTimeout(() => {
-            window.location.reload();
+            if (onReloadReport) {
+              onReloadReport();
+            } else {
+              window.location.reload();
+            }
           }, 1000);
         } else if (job.status === 'error') {
           es.close();
@@ -384,7 +388,8 @@ const PositionSection: React.FC<{
   positionNum: string;
   reportName?: string;
   authFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-}> = ({ data, positionNum, reportName, authFetch }) => {
+  onReloadReport?: () => void;
+}> = ({ data, positionNum, reportName, authFetch, onReloadReport }) => {
   const [contextInfo, setContextInfo] = useState<{ jd_text: string | null; cv_text: string | null } | null>(null);
 
   useEffect(() => {
@@ -601,6 +606,7 @@ const PositionSection: React.FC<{
         reportName={reportName}
         hasExistingJD={hasJD}
         authFetch={authFetch}
+        onReloadReport={onReloadReport}
       />
     </Section>
   );
@@ -612,9 +618,10 @@ interface ReportProps {
   data: AnalysisReport;
   reportName?: string;
   onBack?: () => void;
+  onReloadReport?: () => void;
 }
 
-export default function Report({ data, reportName, onBack }: ReportProps) {
+export default function Report({ data, reportName, onBack, onReloadReport }: ReportProps) {
   const { meta, basicInfo, questions, questionStats, dialogueChains, focusMap, candidateSummary } = data;
   const { authFetch } = useAuth();
 
@@ -746,6 +753,7 @@ export default function Report({ data, reportName, onBack }: ReportProps) {
               positionNum={positionNum}
               reportName={reportName}
               authFetch={authFetch}
+              onReloadReport={onReloadReport}
             />
 
             {/* Candidate Summary */}
