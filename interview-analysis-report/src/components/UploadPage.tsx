@@ -274,10 +274,15 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
               </div>
               <textarea
                 value={jdText}
-                onChange={(e) => setJdText(e.target.value)}
+                onChange={(e) => { if (e.target.value.length <= 2000) setJdText(e.target.value); }}
                 placeholder="粘贴岗位描述..."
                 className="w-full h-48 p-5 bg-bg-base border border-border-main rounded-2xl text-base text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all resize-none"
               />
+              {jdText.length > 0 && (
+                <p className={`text-xs text-right ${jdText.length >= 1800 ? 'text-red-500' : 'text-text-tertiary'}`}>
+                  {jdText.length}/2000
+                </p>
+              )}
             </div>
 
             {/* CV Upload */}

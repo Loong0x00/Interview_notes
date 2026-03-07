@@ -105,7 +105,7 @@ async function runAnalysis(
   job.progressPercent = 10;
   updateJob(job);
 
-  const transcriptText = formatTranscript(segments);
+  const transcriptText = formatTranscript(segments).slice(0, 30000);
   const jsonData = await analyze(transcriptText, context, (detail, percent) => {
     job.progress = `${stepPrefix} AI 分析 - ${detail}`;
     if (percent !== undefined) {
@@ -259,6 +259,11 @@ async function runTranscriptPipeline(
 
     if (!segments || segments.length === 0) {
       throw new Error("无法解析转录文件：未提取到有效对话片段");
+    }
+
+    const totalChars = segments.reduce((sum, s) => sum + s.text.length, 0);
+    if (totalChars > 30000) {
+      throw new Error(`逐字稿超出字数限制：${totalChars} 字（上限 30000 字）`);
     }
 
     await runAnalysis(job, baseName, segments, filePath, "[1/1]", context);

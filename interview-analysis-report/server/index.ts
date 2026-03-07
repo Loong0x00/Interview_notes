@@ -352,14 +352,15 @@ app.post("/api/pipeline/start", requireAuth, audioUpload.fields([{ name: "audio"
 
   // Build context from JD text and CV file
   const context: PipelineContext = {};
-  const jdText = typeof req.body.jdText === "string" ? req.body.jdText.trim().slice(0, 3000) : undefined;
+  const jdText = typeof req.body.jdText === "string" ? req.body.jdText.trim().slice(0, 2000) : undefined;
   if (jdText) context.jdText = jdText;
 
   const cvFile = files["cv"]?.[0];
   if (cvFile) {
     try {
       const cvExt = path.extname(cvFile.originalname);
-      context.cvText = await extractCVText(cvFile.path, cvExt);
+      const rawCv = await extractCVText(cvFile.path, cvExt);
+      context.cvText = rawCv.slice(0, 5000);
     } catch (err) {
       console.error("[API] CV extraction error:", err);
     } finally {
@@ -405,14 +406,15 @@ app.post("/api/pipeline/start-transcript", requireAuth, transcriptUpload.fields(
 
   // Build context from JD text and CV file
   const context: PipelineContext = {};
-  const jdText = typeof req.body.jdText === "string" ? req.body.jdText.trim().slice(0, 3000) : undefined;
+  const jdText = typeof req.body.jdText === "string" ? req.body.jdText.trim().slice(0, 2000) : undefined;
   if (jdText) context.jdText = jdText;
 
   const cvFile = files["cv"]?.[0];
   if (cvFile) {
     try {
       const cvExt = path.extname(cvFile.originalname);
-      context.cvText = await extractCVText(cvFile.path, cvExt);
+      const rawCv = await extractCVText(cvFile.path, cvExt);
+      context.cvText = rawCv.slice(0, 5000);
     } catch (err) {
       console.error("[API] CV extraction error:", err);
     } finally {
