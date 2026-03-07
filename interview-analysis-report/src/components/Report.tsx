@@ -26,6 +26,7 @@ import {
 import type { AnalysisReport, DialogueStep, TranscriptSegment } from '../types';
 import TranscriptChat from './TranscriptChat';
 import { useAuth } from '../contexts/AuthContext';
+import { useLang } from '../contexts/LanguageContext';
 
 // --- Types ---
 
@@ -233,7 +234,8 @@ const ReanalyzePanel: React.FC<{
   hasExistingJD: boolean;
   authFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
   onReloadReport?: () => void;
-}> = ({ reportName, hasExistingJD, authFetch, onReloadReport }) => {
+  t: (key: any) => string;
+}> = ({ reportName, hasExistingJD, authFetch, onReloadReport, t }) => {
   const [expanded, setExpanded] = useState(false);
   const [jdText, setJdText] = useState('');
   const [cvFile, setCvFile] = useState<File | null>(null);
@@ -244,7 +246,7 @@ const ReanalyzePanel: React.FC<{
   const handleSubmit = async () => {
     if (!reportName) return;
     if (!jdText.trim() && !cvFile) {
-      setError('请至少提供岗位JD或简历');
+      setError(t('needMaterial'));
       return;
     }
 
@@ -281,7 +283,7 @@ const ReanalyzePanel: React.FC<{
         if (job.status === 'done') {
           es.close();
           setLoading(false);
-          setProgress('分析完成，正在刷新...');
+          setProgress(t('reanalyzeDone'));
           setTimeout(() => {
             if (onReloadReport) {
               onReloadReport();
@@ -316,7 +318,7 @@ const ReanalyzePanel: React.FC<{
         className="flex items-center gap-3 px-5 py-3 text-sm font-bold text-text-secondary bg-bg-base border border-border-main rounded-2xl hover:text-emerald-600 hover:border-emerald-400 transition-all"
       >
         <Upload size={16} />
-        {hasExistingJD ? '更新材料并重新分析' : '补充 JD / 简历，获得更精准的分析'}
+        {hasExistingJD ? t('updateAndReanalyze') : t('addMaterialsHint')}
         {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
       </button>
 
@@ -329,12 +331,12 @@ const ReanalyzePanel: React.FC<{
         >
           <div className="space-y-2">
             <label className="text-sm font-bold text-text-secondary flex items-center gap-2">
-              <FileText size={14} /> 岗位描述（JD）
+              <FileText size={14} /> {t('jdLabel')}
             </label>
             <textarea
               value={jdText}
               onChange={(e) => setJdText(e.target.value)}
-              placeholder="粘贴岗位描述文本..."
+              placeholder={t('jdTextPlaceholder')}
               disabled={loading}
               className="w-full h-32 px-4 py-3 text-sm bg-bg-base border border-border-main rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all disabled:opacity-50"
               maxLength={2000}
@@ -343,7 +345,7 @@ const ReanalyzePanel: React.FC<{
 
           <div className="space-y-2">
             <label className="text-sm font-bold text-text-secondary flex items-center gap-2">
-              <Upload size={14} /> 简历文件（PDF / DOCX / TXT）
+              <Upload size={14} /> {t('cvLabel')}
             </label>
             <input
               type="file"
@@ -372,9 +374,9 @@ const ReanalyzePanel: React.FC<{
             className="flex items-center gap-2 px-6 py-3 text-sm font-bold text-white bg-emerald-600 rounded-full hover:bg-emerald-700 shadow-lg shadow-emerald-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
-              <><Loader2 size={16} className="animate-spin" /> 分析中...</>
+              <><Loader2 size={16} className="animate-spin" /> {t('analyzing')}</>
             ) : (
-              <><RefreshCw size={16} /> 重新分析</>
+              <><RefreshCw size={16} /> {t('reanalyze')}</>
             )}
           </button>
         </motion.div>
@@ -391,7 +393,8 @@ const PositionSection: React.FC<{
   reportName?: string;
   authFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
   onReloadReport?: () => void;
-}> = ({ data, positionNum, reportName, authFetch, onReloadReport }) => {
+  t: (key: any) => string;
+}> = ({ data, positionNum, reportName, authFetch, onReloadReport, t }) => {
   const [contextInfo, setContextInfo] = useState<{ jd_text: string | null; cv_text: string | null } | null>(null);
 
   useEffect(() => {
@@ -406,12 +409,12 @@ const PositionSection: React.FC<{
   const isInferred = !hasJD;
 
   return (
-    <Section id="position" title={`${positionNum}、岗位摘要`} icon={<Briefcase size={24} />}>
+    <Section id="position" title={`${positionNum}. ${t('positionSummary')}`} icon={<Briefcase size={24} />}>
       {/* Hint banner */}
       {isInferred && (
         <div className="mb-6 flex items-start gap-3 p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/50 text-sm text-blue-800 dark:text-blue-200 font-medium">
           <Info size={18} className="shrink-0 mt-0.5 text-blue-500" />
-          <span>当前岗位分析基于面试对话内容推断。补充岗位 JD 和简历可获得更精准的分析结果。</span>
+          <span>{t('inferredHint')}</span>
         </div>
       )}
 
@@ -420,13 +423,13 @@ const PositionSection: React.FC<{
         {data.positionSummary && (
           <div className={`bg-bg-surface rounded-2xl bento-shadow border border-border-main p-6 space-y-6 ${!data.fitAnalysis ? 'md:col-span-2' : ''}`}>
             <h3 className="text-lg font-bold text-text-primary">
-              {isInferred ? '岗位画像（推断）' : '岗位画像'}
+              {isInferred ? t('positionInferred') : t('positionProfile')}
             </h3>
 
             {/* responsibilities */}
             <div className="space-y-3">
               <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">
-                {isInferred ? '推断核心职责' : 'JD 核心职责'}
+                {isInferred ? t('inferredResponsibilities') : t('jdResponsibilities')}
               </span>
               {data.positionSummary.responsibilities.map((r, i) => (
                 <div key={i} className="flex gap-4">
@@ -439,7 +442,7 @@ const PositionSection: React.FC<{
             {/* interview actual work */}
             {data.positionSummary.interviewActualWork && data.positionSummary.interviewActualWork.length > 0 && (
               <div className="space-y-3">
-                <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">面试官口述实际工作</span>
+                <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">{t('actualWork')}</span>
                 {data.positionSummary.interviewActualWork.map((w, i) => (
                   <div key={i} className="flex gap-4">
                     <div className="w-2 h-2 rounded-full bg-blue-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.4)]" />
@@ -467,7 +470,7 @@ const PositionSection: React.FC<{
             {/* hidden requirements */}
             {data.positionSummary.hiddenRequirements && data.positionSummary.hiddenRequirements.length > 0 && (
               <div className="space-y-3">
-                <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">隐藏要求</span>
+                <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">{t('hiddenRequirements')}</span>
                 {data.positionSummary.hiddenRequirements.map((req, i) => (
                   <div key={i} className="flex gap-4">
                     <div className="w-2 h-2 rounded-full bg-amber-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
@@ -480,7 +483,7 @@ const PositionSection: React.FC<{
             {/* KPIs */}
             {data.positionSummary.keyKPIs.length > 0 && (
               <div className="space-y-3">
-                <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">关键 KPI</span>
+                <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">{t('keyKPIs')}</span>
                 {data.positionSummary.keyKPIs.map((kpi, i) => (
                   <div key={i} className="flex gap-4">
                     <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2.5 shrink-0" />
@@ -493,16 +496,16 @@ const PositionSection: React.FC<{
             {/* work intensity, team, requirements */}
             <div className="pt-4 border-t border-border-main space-y-4">
               <div className="text-base">
-                <span className="font-bold text-text-secondary">工作强度：</span>
+                <span className="font-bold text-text-secondary">{t('workIntensity')}</span>
                 <span className="text-text-primary font-medium">{data.positionSummary.workIntensity}</span>
               </div>
               <div className="text-base">
-                <span className="font-bold text-text-secondary">团队文化：</span>
+                <span className="font-bold text-text-secondary">{t('teamCulture')}</span>
                 <span className="text-text-primary font-medium">{data.positionSummary.teamCulture}</span>
               </div>
               {data.positionSummary.requirements.length > 0 && (
                 <div className="space-y-3">
-                  <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">硬性要求</span>
+                  <span className="text-sm font-bold text-text-secondary uppercase tracking-wider">{t('hardRequirements')}</span>
                   {data.positionSummary.requirements.map((r, i) => (
                     <div key={i} className="flex gap-4">
                       <div className="w-2 h-2 rounded-full bg-amber-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
@@ -515,7 +518,7 @@ const PositionSection: React.FC<{
 
             {data.positionSummary.highlights && (
               <div className="text-base bg-emerald-50 dark:bg-emerald-900/10 p-5 rounded-2xl border border-emerald-100 dark:border-emerald-800/50">
-                <span className="font-bold text-emerald-700 dark:text-emerald-300">亮点：</span>
+                <span className="font-bold text-emerald-700 dark:text-emerald-300">{t('highlights')}</span>
                 <span className="text-emerald-900 dark:text-emerald-100 font-medium">{data.positionSummary.highlights}</span>
               </div>
             )}
@@ -526,7 +529,7 @@ const PositionSection: React.FC<{
         {data.fitAnalysis && (
           <div className={`bg-bg-surface rounded-2xl bento-shadow border border-border-main p-6 space-y-6 ${!data.positionSummary ? 'md:col-span-2' : ''}`}>
             <h3 className="text-lg font-bold text-text-primary">
-              {isInferred ? '契合度（推断）' : '契合度'}
+              {isInferred ? t('fitInferred') : t('fitScore')}
             </h3>
 
             <div className="text-center py-4">
@@ -537,7 +540,7 @@ const PositionSection: React.FC<{
               }`}>
                 {data.fitAnalysis.overallScore}
               </div>
-              <div className="text-xs font-bold text-text-secondary uppercase tracking-widest mb-3">综合契合度评分</div>
+              <div className="text-xs font-bold text-text-secondary uppercase tracking-widest mb-3">{t('overallFitScore')}</div>
               <p className="text-base text-text-primary leading-relaxed font-bold">
                 {data.fitAnalysis.recommendation}
               </p>
@@ -547,19 +550,19 @@ const PositionSection: React.FC<{
               <div className="space-y-4 pt-4 border-t border-border-main">
                 {data.fitAnalysis.hardSkillMatch && (
                   <div className="text-base">
-                    <span className="font-bold text-text-secondary">硬技能匹配：</span>
+                    <span className="font-bold text-text-secondary">{t('hardSkillMatch')}</span>
                     <span className="text-text-primary font-medium">{data.fitAnalysis.hardSkillMatch}</span>
                   </div>
                 )}
                 {data.fitAnalysis.softSkillMatch && (
                   <div className="text-base">
-                    <span className="font-bold text-text-secondary">软技能匹配：</span>
+                    <span className="font-bold text-text-secondary">{t('softSkillMatch')}</span>
                     <span className="text-text-primary font-medium">{data.fitAnalysis.softSkillMatch}</span>
                   </div>
                 )}
                 {data.fitAnalysis.experienceRelevance && (
                   <div className="text-base">
-                    <span className="font-bold text-text-secondary">经验相关度：</span>
+                    <span className="font-bold text-text-secondary">{t('experienceRelevance')}</span>
                     <span className="text-text-primary font-medium">{data.fitAnalysis.experienceRelevance}</span>
                   </div>
                 )}
@@ -569,7 +572,7 @@ const PositionSection: React.FC<{
             {/* Desktop: table view */}
             <div className="hidden md:block overflow-x-auto rounded-xl border border-border-main">
               <Table
-                headers={['维度', isInferred ? '推断要求' : 'JD 要求', '候选人证据', '得分', '评价']}
+                headers={[t('dimensionCol'), isInferred ? t('inferredRequirement') : t('jdRequirement'), t('candidateEvidence'), t('scoreCol'), t('commentCol')]}
                 rows={data.fitAnalysis.dimensions.map(d => [
                   d.dimension,
                   d.jdRequirement,
@@ -589,15 +592,15 @@ const PositionSection: React.FC<{
                     <Badge color={d.score >= 80 ? 'green' : d.score >= 60 ? 'amber' : 'red'}>{d.score}</Badge>
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{isInferred ? '推断要求' : 'JD 要求'}</span>
+                    <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{isInferred ? t('inferredRequirement') : t('jdRequirement')}</span>
                     <p className="text-sm text-text-primary mt-0.5">{d.jdRequirement}</p>
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">候选人证据</span>
+                    <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('candidateEvidence')}</span>
                     <p className="text-sm text-text-primary mt-0.5">{d.candidateEvidence}</p>
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">评价</span>
+                    <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('commentCol')}</span>
                     <p className="text-sm text-text-primary mt-0.5">{d.comment}</p>
                   </div>
                 </div>
@@ -606,7 +609,7 @@ const PositionSection: React.FC<{
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-3">
-                <span className="text-sm font-bold text-emerald-600 uppercase tracking-wider">优势匹配</span>
+                <span className="text-sm font-bold text-emerald-600 uppercase tracking-wider">{t('strengthMatch')}</span>
                 {data.fitAnalysis.strengths.map((s, i) => (
                   <div key={i} className="flex gap-3">
                     <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
@@ -615,7 +618,7 @@ const PositionSection: React.FC<{
                 ))}
               </div>
               <div className="space-y-3">
-                <span className="text-sm font-bold text-amber-600 uppercase tracking-wider">待提升</span>
+                <span className="text-sm font-bold text-amber-600 uppercase tracking-wider">{t('gapsToImprove')}</span>
                 {data.fitAnalysis.gaps.map((g, i) => (
                   <div key={i} className="flex gap-3">
                     <div className="w-2 h-2 rounded-full bg-amber-500 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
@@ -634,6 +637,7 @@ const PositionSection: React.FC<{
         hasExistingJD={hasJD}
         authFetch={authFetch}
         onReloadReport={onReloadReport}
+        t={t}
       />
     </Section>
   );
@@ -651,6 +655,7 @@ interface ReportProps {
 export default function Report({ data, reportName, onBack, onReloadReport }: ReportProps) {
   const { meta, basicInfo, questions, questionStats, dialogueChains, focusMap, candidateSummary } = data;
   const { authFetch } = useAuth();
+  const { t, lang } = useLang();
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [questionFilter, setQuestionFilter] = useState<'全部' | '预设' | '追问' | '澄清'>('全部');
@@ -715,13 +720,13 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
             {onBack && (
               <button onClick={onBack} className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-text-secondary bg-bg-surface bento-shadow border border-border-main rounded-full hover:text-emerald-600 transition-all">
                 <ArrowLeft size={18} />
-                <span className="hidden sm:inline">返回</span>
+                <span className="hidden sm:inline">{t('back')}</span>
               </button>
             )}
             <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-emerald-500/20">
               R
             </div>
-            <h1 className="text-xl font-bold tracking-tight hidden sm:block">面试对话分析</h1>
+            <h1 className="text-xl font-bold tracking-tight hidden sm:block">{t('interviewAnalysis')}</h1>
           </div>
           <div className="flex items-center gap-6 text-sm font-bold text-text-secondary">
             <span className="flex items-center gap-2 bg-bg-surface px-4 py-2 rounded-full bento-shadow border border-border-main"><User size={16} className="text-emerald-600" /> {meta.position}</span>
@@ -737,13 +742,15 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
           <aside className="hidden lg:block lg:col-span-3">
             <nav className="sticky top-32 space-y-2">
               {(() => {
-                const chineseNumbers = ['一', '二', '三', '四', '五', '六', '七', '八'];
+                const sectionNumbers = lang === 'zh'
+                  ? ['一', '二', '三', '四', '五', '六', '七', '八']
+                  : ['1', '2', '3', '4', '5', '6', '7', '8'];
                 const navItems = [
-                  { id: 'position', label: '岗位摘要', icon: Briefcase },
-                  { id: 'summary', label: '表现摘要', icon: CheckCircle2 },
-                  { id: 'questions', label: '问题列表', icon: MessageSquare },
-                  { id: 'chains', label: '对话链分析', icon: TrendingUp },
-                  { id: 'focus', label: '关注图谱', icon: Target },
+                  { id: 'position', label: t('positionSummary'), icon: Briefcase },
+                  { id: 'summary', label: t('candidateSummary'), icon: CheckCircle2 },
+                  { id: 'questions', label: t('questionList'), icon: MessageSquare },
+                  { id: 'chains', label: t('dialogueChains'), icon: TrendingUp },
+                  { id: 'focus', label: t('focusMap'), icon: Target },
                 ];
                 return navItems.map((item, idx) => (
                   <a
@@ -752,7 +759,7 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
                     className="flex items-center gap-4 px-6 py-4 text-sm font-bold text-text-secondary rounded-2xl hover:bg-bg-surface hover:text-emerald-600 hover:bento-shadow border border-transparent hover:border-border-main transition-all group"
                   >
                     <item.icon size={18} className="group-hover:text-emerald-600 transition-colors" />
-                    {chineseNumbers[idx]}、{item.label}
+                    {sectionNumbers[idx]}. {item.label}
                   </a>
                 ));
               })()}
@@ -765,7 +772,7 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
             <button
               onClick={() => setMobileNavOpen(true)}
               className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-emerald-600 text-white shadow-lg flex items-center justify-center hover:bg-emerald-700 transition-colors"
-              aria-label="打开导航"
+              aria-label={t('navigation')}
             >
               <Menu size={24} />
             </button>
@@ -783,24 +790,26 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
               className={`fixed top-0 left-0 z-50 h-full w-72 bg-bg-main border-r border-border-main shadow-2xl transform transition-transform duration-300 ease-in-out ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}
             >
               <div className="flex items-center justify-between px-6 py-5 border-b border-border-main">
-                <span className="text-lg font-bold text-text-primary">导航</span>
+                <span className="text-lg font-bold text-text-primary">{t('navigation')}</span>
                 <button
                   onClick={() => setMobileNavOpen(false)}
                   className="p-2 rounded-xl hover:bg-bg-surface transition-colors"
-                  aria-label="关闭导航"
+                  aria-label={t('navigation')}
                 >
                   <X size={20} className="text-text-secondary" />
                 </button>
               </div>
               <nav className="p-4 space-y-2">
                 {(() => {
-                  const chineseNumbers = ['一', '二', '三', '四', '五', '六', '七', '八'];
+                  const sectionNumbers = lang === 'zh'
+                    ? ['一', '二', '三', '四', '五', '六', '七', '八']
+                    : ['1', '2', '3', '4', '5', '6', '7', '8'];
                   const navItems = [
-                    { id: 'position', label: '岗位摘要', icon: Briefcase },
-                    { id: 'summary', label: '表现摘要', icon: CheckCircle2 },
-                    { id: 'questions', label: '问题列表', icon: MessageSquare },
-                    { id: 'chains', label: '对话链分析', icon: TrendingUp },
-                    { id: 'focus', label: '关注图谱', icon: Target },
+                    { id: 'position', label: t('positionSummary'), icon: Briefcase },
+                    { id: 'summary', label: t('candidateSummary'), icon: CheckCircle2 },
+                    { id: 'questions', label: t('questionList'), icon: MessageSquare },
+                    { id: 'chains', label: t('dialogueChains'), icon: TrendingUp },
+                    { id: 'focus', label: t('focusMap'), icon: Target },
                   ];
                   return navItems.map((item, idx) => (
                     <a
@@ -810,7 +819,7 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
                       className="flex items-center gap-4 px-6 py-4 text-sm font-bold text-text-secondary rounded-2xl hover:bg-bg-surface hover:text-emerald-600 hover:bento-shadow border border-transparent hover:border-border-main transition-all group"
                     >
                       <item.icon size={18} className="group-hover:text-emerald-600 transition-colors" />
-                      {chineseNumbers[idx]}、{item.label}
+                      {sectionNumbers[idx]}. {item.label}
                     </a>
                   ));
                 })()}
@@ -823,9 +832,11 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
 
             {/* Dynamic section numbering */}
             {(() => {
-              const chineseNumbers = ['一', '二', '三', '四', '五', '六', '七', '八'];
+              const sectionNumbers = lang === 'zh'
+                ? ['一', '二', '三', '四', '五', '六', '七', '八']
+                : ['1', '2', '3', '4', '5', '6', '7', '8'];
               let sectionIdx = 0;
-              const nextNum = () => chineseNumbers[sectionIdx++];
+              const nextNum = () => sectionNumbers[sectionIdx++];
               const positionNum = nextNum();
               const summaryNum = nextNum();
               const questionsNum = nextNum();
@@ -841,14 +852,15 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
               reportName={reportName}
               authFetch={authFetch}
               onReloadReport={onReloadReport}
+              t={t}
             />
 
             {/* Candidate Summary */}
-            <Section id="summary" title={`${summaryNum}、候选人表现摘要`} icon={<CheckCircle2 size={24} />}>
+            <Section id="summary" title={`${summaryNum}. ${t('candidateSummary')}`} icon={<CheckCircle2 size={24} />}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <Card>
                   <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 font-bold text-text-primary flex items-center gap-3">
-                    <Brain size={20} className="text-emerald-600" /> 展现能力
+                    <Brain size={20} className="text-emerald-600" /> {t('abilities')}
                   </div>
                   <div className="p-8 space-y-6">
                     {candidateSummary.abilities.map((item, i) => (
@@ -865,7 +877,7 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
 
                 <Card>
                   <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 font-bold text-text-primary flex items-center gap-3">
-                    <AlertTriangle size={20} className="text-amber-500" /> 潜在风险
+                    <AlertTriangle size={20} className="text-amber-500" /> {t('risks')}
                   </div>
                   <div className="p-8 space-y-6">
                     {candidateSummary.risks.map((item, i) => (
@@ -883,22 +895,27 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
             </Section>
 
             {/* Questions List */}
-            <Section id="questions" title={`${questionsNum}、面试官问题列表`} icon={<MessageSquare size={24} />}>
+            <Section id="questions" title={`${questionsNum}. ${t('questionList')}`} icon={<MessageSquare size={24} />}>
               <div className="flex flex-wrap gap-3 mb-8">
-                {(['全部', '预设', '追问', '澄清'] as const).map(tab => (
+                {([
+                  { value: '全部' as const, label: t('allFilter') },
+                  { value: '预设' as const, label: t('preset') },
+                  { value: '追问' as const, label: t('followUp') },
+                  { value: '澄清' as const, label: t('clarification') },
+                ]).map(tab => (
                   <button
-                    key={tab}
-                    onClick={() => setQuestionFilter(tab)}
+                    key={tab.value}
+                    onClick={() => setQuestionFilter(tab.value)}
                     className={`px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest border transition-all ${
-                      questionFilter === tab
+                      questionFilter === tab.value
                         ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-500/25'
                         : 'bg-bg-surface text-text-secondary border-border-main hover:border-emerald-400 hover:text-emerald-600 bento-shadow'
                     }`}
                   >
-                    {tab}
-                    {tab !== '全部' && (
+                    {tab.label}
+                    {tab.value !== '全部' && (
                       <span className="ml-2 opacity-60">
-                        {tab === '预设' ? questionStats.preset : tab === '追问' ? questionStats.followUp : questionStats.clarification}
+                        {tab.value === '预设' ? questionStats.preset : tab.value === '追问' ? questionStats.followUp : questionStats.clarification}
                       </span>
                     )}
                   </button>
@@ -924,10 +941,10 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
                     ))}
                   </div>
                   <div className="bg-bg-base p-6 border-t border-border-main flex flex-wrap gap-6 text-[11px] font-bold uppercase tracking-widest text-text-secondary">
-                    <span className="text-text-primary">数据统计</span>
-                    <span>预设: {questionStats.preset}</span>
-                    <span>追问: {questionStats.followUp}</span>
-                    <span>澄清: {questionStats.clarification}</span>
+                    <span className="text-text-primary">{t('stats')}</span>
+                    <span>{t('preset')}: {questionStats.preset}</span>
+                    <span>{t('followUp')}: {questionStats.followUp}</span>
+                    <span>{t('clarification')}: {questionStats.clarification}</span>
                   </div>
                 </Card>
 
@@ -936,9 +953,9 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
                   <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <MessageCircle size={20} className="text-emerald-600" />
-                      <h3 className="font-bold text-text-primary">转写全文</h3>
+                      <h3 className="font-bold text-text-primary">{t('transcriptFull')}</h3>
                     </div>
-                    <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">{transcript.length} 轮对话</span>
+                    <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">{transcript.length} {t('roundsOfDialogue')}</span>
                   </div>
                   <TranscriptChat
                     segments={transcript}
@@ -952,7 +969,7 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
             </Section>
 
             {/* Dialogue Chains */}
-            <Section id="chains" title={`${chainsNum}、对话链分析`} icon={<TrendingUp size={24} />}>
+            <Section id="chains" title={`${chainsNum}. ${t('dialogueChains')}`} icon={<TrendingUp size={24} />}>
               {(() => {
                 const sorted = [...dialogueChains].sort((a, b) => b.steps.length - a.steps.length);
                 const key = sorted.slice(0, 2);
@@ -975,35 +992,35 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
             </Section>
 
             {/* Focus Map */}
-            <Section id="focus" title={`${focusNum}、面试官关注图谱`} icon={<Target size={24} />}>
+            <Section id="focus" title={`${focusNum}. ${t('focusMap')}`} icon={<Target size={24} />}>
               <Card className="mb-8">
-                <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 font-bold text-text-primary">话题深度热力图</div>
+                <div className="px-8 py-5 border-b border-border-main bg-bg-base/50 font-bold text-text-primary">{t('topicHeatmap')}</div>
                 {/* Desktop: table */}
                 <div className="hidden md:block">
                   <Table
-                    headers={['话题', '追问层数', '涉及问题', '关注等级']}
-                    rows={focusMap.topics.map(t => [
-                      t.topic,
-                      t.depth,
-                      t.questions,
-                      <Badge color={getFocusLevelBadgeColor(t.level)}>{t.level}</Badge>,
+                    headers={[t('topicCol'), t('depthCol'), t('questionsCol'), t('levelCol')]}
+                    rows={focusMap.topics.map(topic => [
+                      topic.topic,
+                      topic.depth,
+                      topic.questions,
+                      <Badge color={getFocusLevelBadgeColor(topic.level)}>{topic.level}</Badge>,
                     ])}
                   />
                 </div>
                 {/* Mobile: collapsible cards */}
                 <div className="md:hidden divide-y divide-border-main">
-                  {focusMap.topics.map((t, i) => (
+                  {focusMap.topics.map((topic, i) => (
                     <details key={i} className="group">
                       <summary className="flex items-center justify-between px-6 py-4 cursor-pointer list-none">
                         <div className="flex items-center gap-3">
-                          <span className="font-bold text-text-primary text-sm">{t.topic}</span>
-                          <Badge color={getFocusLevelBadgeColor(t.level)}>{t.level}</Badge>
+                          <span className="font-bold text-text-primary text-sm">{topic.topic}</span>
+                          <Badge color={getFocusLevelBadgeColor(topic.level)}>{topic.level}</Badge>
                         </div>
                         <ChevronDown size={16} className="text-text-secondary transition-transform group-open:rotate-180" />
                       </summary>
                       <div className="px-6 pb-4 space-y-2 text-sm">
-                        <div><span className="font-bold text-text-secondary">追问层数：</span><span className="text-text-primary">{t.depth}</span></div>
-                        <div><span className="font-bold text-text-secondary">涉及问题：</span><span className="text-text-primary">{t.questions}</span></div>
+                        <div><span className="font-bold text-text-secondary">{t('depthCol')}:</span> <span className="text-text-primary">{topic.depth}</span></div>
+                        <div><span className="font-bold text-text-secondary">{t('questionsCol')}:</span> <span className="text-text-primary">{topic.questions}</span></div>
                       </div>
                     </details>
                   ))}
@@ -1018,7 +1035,7 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
                         <AlertTriangle size={24} />
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold text-red-900 dark:text-red-200 mb-4">极高关注：{topInsight.title}</h3>
+                        <h3 className="text-xl font-bold text-red-900 dark:text-red-200 mb-4">{t('extremelyHigh')}: {topInsight.title}</h3>
                         <div className="text-base text-red-800 dark:text-red-300 leading-relaxed font-medium">
                           <p className="mb-4">{topInsight.description}</p>
                           <ul className="space-y-3">
@@ -1031,7 +1048,7 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
                           </ul>
                           {topInsight.coreQuestion && (
                             <div className="mt-6 p-4 rounded-2xl bg-red-100/50 dark:bg-red-900/40 border border-red-200/50 dark:border-red-700/50 font-bold text-red-900 dark:text-red-100">
-                              核心问题：{topInsight.coreQuestion}
+                              {t('coreQuestion')}: {topInsight.coreQuestion}
                             </div>
                           )}
                         </div>
@@ -1047,7 +1064,7 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
                         <Search size={24} />
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold text-amber-900 dark:text-amber-200 mb-4">高关注：{secondInsight.title}</h3>
+                        <h3 className="text-xl font-bold text-amber-900 dark:text-amber-200 mb-4">{t('highFocus')}: {secondInsight.title}</h3>
                         <div className="text-base text-amber-800 dark:text-amber-300 leading-relaxed font-medium">
                           <p className="mb-4">{secondInsight.description}</p>
                           <ul className="space-y-3">
@@ -1071,10 +1088,10 @@ export default function Report({ data, reportName, onBack, onReloadReport }: Rep
             })()}
 
             <footer className="text-center text-text-secondary text-sm font-medium py-16 border-t border-border-main mt-16">
-              <p>本报告由 AI 分析层（{meta.model}）依据高阶分析流程生成</p>
-              <p className="mt-2 text-[10px] font-bold uppercase tracking-widest opacity-60">原始数据：{meta.source}</p>
+              <p>{t('footerAI')}（{meta.model}）{t('footerProcedure')}</p>
+              <p className="mt-2 text-[10px] font-bold uppercase tracking-widest opacity-60">{t('footerSource')}: {meta.source}</p>
               {reportName && (
-                <p className="mt-4 text-xs text-text-secondary">数据来源：{reportName}</p>
+                <p className="mt-4 text-xs text-text-secondary">{t('footerDataSource')}: {reportName}</p>
               )}
               <p className="mt-4 text-xs text-text-secondary">&copy; 2026 Loong0x00 &amp; AmandaWWW</p>
             </footer>

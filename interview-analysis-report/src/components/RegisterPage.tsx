@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLang } from '../contexts/LanguageContext';
 
 interface RegisterPageProps {
   onGoLogin: () => void;
@@ -7,6 +8,7 @@ interface RegisterPageProps {
 
 export default function RegisterPage({ onGoLogin }: RegisterPageProps) {
   const { register } = useAuth();
+  const { t } = useLang();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [inviteCode, setInviteCode] = useState('');
@@ -20,7 +22,7 @@ export default function RegisterPage({ onGoLogin }: RegisterPageProps) {
     try {
       await register(username, password, inviteCode);
     } catch (err: any) {
-      setError(err.message || '注册失败');
+      setError(err.message || t('registerFailed'));
     } finally {
       setLoading(false);
     }
@@ -33,15 +35,15 @@ export default function RegisterPage({ onGoLogin }: RegisterPageProps) {
           <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-emerald-500/20">
             R
           </div>
-          <span className="text-2xl font-bold text-text-primary tracking-tight">面试分析大师</span>
+          <span className="text-2xl font-bold text-text-primary tracking-tight">{t('appName')}</span>
         </div>
 
         <div className="bg-bg-surface rounded-3xl bento-shadow border border-border-main p-10">
-          <h2 className="text-2xl font-bold text-text-primary mb-8 text-center">创建账号</h2>
+          <h2 className="text-2xl font-bold text-text-primary mb-8 text-center">{t('createAccount')}</h2>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-semibold text-text-secondary mb-2 ml-1">用户名</label>
+              <label className="block text-sm font-semibold text-text-secondary mb-2 ml-1">{t('username')}</label>
               <input
                 type="text"
                 value={username}
@@ -52,7 +54,7 @@ export default function RegisterPage({ onGoLogin }: RegisterPageProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-text-secondary mb-2 ml-1">密码</label>
+              <label className="block text-sm font-semibold text-text-secondary mb-2 ml-1">{t('password')}</label>
               <input
                 type="password"
                 value={password}
@@ -63,12 +65,12 @@ export default function RegisterPage({ onGoLogin }: RegisterPageProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-text-secondary mb-2 ml-1">邀请码</label>
+              <label className="block text-sm font-semibold text-text-secondary mb-2 ml-1">{t('inviteCode')}</label>
               <input
                 type="text"
                 value={inviteCode}
                 onChange={e => setInviteCode(e.target.value.trim())}
-                placeholder="粘贴邀请码"
+                placeholder={t('pasteInviteCode')}
                 required
                 className="w-full px-4 py-3 border border-border-main rounded-2xl text-base font-mono bg-bg-base text-text-primary focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none transition-all"
               />
@@ -85,14 +87,14 @@ export default function RegisterPage({ onGoLogin }: RegisterPageProps) {
               disabled={loading}
               className="w-full py-4 bg-emerald-600 text-white rounded-full hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-base font-bold shadow-lg shadow-emerald-500/20 mt-2"
             >
-              {loading ? '正在注册...' : '注册'}
+              {loading ? t('registering') : t('register')}
             </button>
           </form>
 
           <p className="mt-8 text-center text-sm text-text-secondary font-medium">
-            已有账号？
+            {t('hasAccount')}
             <button onClick={onGoLogin} className="text-emerald-600 hover:text-emerald-700 font-bold ml-1 transition-colors">
-              登录
+              {t('loginNow')}
             </button>
           </p>
         </div>

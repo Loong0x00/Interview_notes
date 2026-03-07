@@ -6,6 +6,7 @@ import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import { LanguageProvider, useLang } from './contexts/LanguageContext';
 import type { AnalysisReport, ReportListItem } from './types';
 
 type View = 'list' | 'report' | 'upload' | 'login' | 'register';
@@ -23,8 +24,22 @@ function ThemeToggle() {
   );
 }
 
+function LangToggle() {
+  const { lang, toggle } = useLang();
+  return (
+    <button
+      onClick={toggle}
+      className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+      aria-label="Toggle language"
+    >
+      {lang === 'zh' ? 'EN' : '\u4e2d'}
+    </button>
+  );
+}
+
 function AppInner() {
   const { isAuthenticated, isLoading, logout, authFetch, user } = useAuth();
+  const { t } = useLang();
   const [view, setView] = useState<View>('list');
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [selectedReport, setSelectedReport] = useState<AnalysisReport | null>(null);
@@ -176,7 +191,7 @@ function AppInner() {
   const userMenu = (
     <div className="flex items-center gap-3">
       <span className="text-sm text-text-secondary">{user?.username}</span>
-      <button onClick={logout} className="text-sm text-text-secondary hover:text-text-primary transition-colors">退出</button>
+      <button onClick={logout} className="text-sm text-text-secondary hover:text-text-primary transition-colors">{t('logout')}</button>
     </div>
   );
 
@@ -245,17 +260,18 @@ function AppInner() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3 flex-shrink-0 min-w-0">
             <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-emerald-500/20 flex-shrink-0">R</div>
-            <h1 className="hidden sm:block text-xl font-bold text-text-primary tracking-tight">面试分析大师</h1>
+            <h1 className="hidden sm:block text-xl font-bold text-text-primary tracking-tight">{t('appName')}</h1>
             <button
               onClick={() => setView('upload')}
               className="ml-4 text-xs px-3 py-1.5 sm:text-sm sm:px-5 sm:py-2 bg-emerald-600 text-white font-semibold rounded-full hover:bg-emerald-700 transition-all shadow-md shadow-emerald-500/10 flex-shrink-0"
             >
-              上传新面试
+              {t('uploadNew')}
             </button>
           </div>
           <div className="flex items-center gap-4 flex-shrink-0">
+            <LangToggle />
             <ThemeToggle />
-            <button onClick={logout} className="text-sm text-text-secondary hover:text-text-primary transition-colors font-medium">退出登录</button>
+            <button onClick={logout} className="text-sm text-text-secondary hover:text-text-primary transition-colors font-medium">{t('logout')}</button>
           </div>
         </div>
       </header>
@@ -265,12 +281,12 @@ function AppInner() {
           <div className="flex flex-wrap items-center gap-3 mb-6">
             {interviewTypes.length > 0 && (
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">轮次</span>
+                <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">{t('roundLabel')}</span>
                 <div className="flex gap-1.5">
                   <button
                     onClick={() => setFilterType('')}
                     className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${!filterType ? 'bg-emerald-600 text-white shadow-sm' : 'bg-bg-surface text-text-secondary border border-border-main hover:border-emerald-400'}`}
-                  >全部</button>
+                  >{t('allFilter')}</button>
                   {interviewTypes.map(t => (
                     <button
                       key={t}
@@ -283,12 +299,12 @@ function AppInner() {
             )}
             {allTags.length > 0 && (
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-text-secondary uppercase tracking-wider ml-2">标签</span>
+                <span className="text-xs font-bold text-text-secondary uppercase tracking-wider ml-2">{t('tagLabel')}</span>
                 <div className="flex gap-1.5 flex-wrap">
                   <button
                     onClick={() => setFilterTag('')}
                     className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${!filterTag ? 'bg-emerald-600 text-white shadow-sm' : 'bg-bg-surface text-text-secondary border border-border-main hover:border-emerald-400'}`}
-                  >全部</button>
+                  >{t('allFilter')}</button>
                   {allTags.map(t => (
                     <button
                       key={t}
@@ -305,16 +321,16 @@ function AppInner() {
         {/* Sort buttons */}
         {reports.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 mb-6">
-            <span className="text-xs font-bold text-text-secondary uppercase tracking-wider mr-1">排序</span>
+            <span className="text-xs font-bold text-text-secondary uppercase tracking-wider mr-1">{t('sortLabel')}</span>
             {([
-              ['time-desc', '上传时间 ↓'],
-              ['time-asc', '上传时间 ↑'],
-              ['name-asc', '名称 A-Z'],
-              ['name-desc', '名称 Z-A'],
-            ] as const).map(([key, label]) => (
+              ['time-desc', t('sortTimeDesc')],
+              ['time-asc', t('sortTimeAsc')],
+              ['name-asc', t('sortNameAsc')],
+              ['name-desc', t('sortNameDesc')],
+            ] as [string, string][]).map(([key, label]) => (
               <button
                 key={key}
-                onClick={() => setSortMode(key)}
+                onClick={() => setSortMode(key as typeof sortMode)}
                 className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${sortMode === key ? 'bg-emerald-600 text-white shadow-sm' : 'bg-bg-surface text-text-secondary border border-border-main hover:border-emerald-400'}`}
               >{label}</button>
             ))}
@@ -323,12 +339,12 @@ function AppInner() {
 
         {reports.length === 0 ? (
           <div className="text-center py-24 bg-bg-surface rounded-3xl bento-shadow border border-border-main">
-            <p className="text-text-secondary text-lg mb-6">暂无报告，开始您的第一次分析吧</p>
+            <p className="text-text-secondary text-lg mb-6">{t('noReports')}</p>
             <button
               onClick={() => setView('upload')}
               className="px-8 py-3.5 bg-emerald-600 text-white font-bold rounded-full hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20"
             >
-              上传第一份面试
+              {t('uploadFirst')}
             </button>
           </div>
         ) : (
@@ -385,7 +401,7 @@ function AppInner() {
                       </span>
                     )}
                     <span className="px-4 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-full uppercase tracking-wider">
-                      已分析
+                      {t('analyzed')}
                     </span>
                   </div>
                 </div>
@@ -419,7 +435,7 @@ function AppInner() {
                         onChange={(e) => setNewTagText(e.target.value)}
                         onBlur={() => { setAddingTagFor(null); setNewTagText(''); }}
                         onKeyDown={(e) => { if (e.key === 'Escape') { setAddingTagFor(null); setNewTagText(''); } }}
-                        placeholder="标签名"
+                        placeholder={t('tagPlaceholder')}
                         maxLength={20}
                         className="w-20 px-2 py-1 text-xs bg-bg-base border border-border-main rounded-full focus:outline-none focus:border-emerald-500 text-text-primary"
                       />
@@ -430,7 +446,7 @@ function AppInner() {
                       className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-text-secondary hover:text-emerald-600 bg-transparent border border-dashed border-border-main rounded-full hover:border-emerald-400 transition-all"
                     >
                       <Plus className="w-3 h-3" />
-                      标签
+                      {t('addTag')}
                     </button>
                   )}
                 </div>
@@ -447,9 +463,11 @@ function AppInner() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <AppInner />
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <AppInner />
+        </AuthProvider>
+      </LanguageProvider>
     </ThemeProvider>
   );
 }

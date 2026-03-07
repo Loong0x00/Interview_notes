@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLang } from '../contexts/LanguageContext';
 
 interface LoginPageProps {
   onGoRegister: () => void;
@@ -7,6 +8,7 @@ interface LoginPageProps {
 
 export default function LoginPage({ onGoRegister }: LoginPageProps) {
   const { login } = useAuth();
+  const { t } = useLang();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -19,7 +21,7 @@ export default function LoginPage({ onGoRegister }: LoginPageProps) {
     try {
       await login(username, password);
     } catch (err: any) {
-      setError(err.message || '登录失败');
+      setError(err.message || t('loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -32,15 +34,15 @@ export default function LoginPage({ onGoRegister }: LoginPageProps) {
           <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-emerald-500/20">
             R
           </div>
-          <span className="text-2xl font-bold text-text-primary tracking-tight">面试分析大师</span>
+          <span className="text-2xl font-bold text-text-primary tracking-tight">{t('appName')}</span>
         </div>
 
         <div className="bg-bg-surface rounded-3xl bento-shadow border border-border-main p-10">
-          <h2 className="text-2xl font-bold text-text-primary mb-8 text-center">欢迎回来</h2>
+          <h2 className="text-2xl font-bold text-text-primary mb-8 text-center">{t('welcomeBack')}</h2>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-semibold text-text-secondary mb-2 ml-1">用户名</label>
+              <label className="block text-sm font-semibold text-text-secondary mb-2 ml-1">{t('username')}</label>
               <input
                 type="text"
                 value={username}
@@ -51,7 +53,7 @@ export default function LoginPage({ onGoRegister }: LoginPageProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-text-secondary mb-2 ml-1">密码</label>
+              <label className="block text-sm font-semibold text-text-secondary mb-2 ml-1">{t('password')}</label>
               <input
                 type="password"
                 value={password}
@@ -72,14 +74,14 @@ export default function LoginPage({ onGoRegister }: LoginPageProps) {
               disabled={loading}
               className="w-full py-4 bg-emerald-600 text-white rounded-full hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-base font-bold shadow-lg shadow-emerald-500/20 mt-2"
             >
-              {loading ? '正在登录...' : '登录'}
+              {loading ? t('loggingIn') : t('login')}
             </button>
           </form>
 
           <p className="mt-8 text-center text-sm text-text-secondary font-medium">
-            没有账号？
+            {t('noAccount')}
             <button onClick={onGoRegister} className="text-emerald-600 hover:text-emerald-700 font-bold ml-1 transition-colors">
-              立即注册
+              {t('signUpNow')}
             </button>
           </p>
         </div>

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { TranscriptSegment } from '../types';
+import { useLang } from '../contexts/LanguageContext';
 
 interface TranscriptChatProps {
   segments: TranscriptSegment[];
@@ -18,6 +19,7 @@ function formatTime(ms: number): string {
 }
 
 export default function TranscriptChat({ segments, interviewerSpeaker, activeSegmentIndex, loading, containerRef }: TranscriptChatProps) {
+  const { t } = useLang();
   const mergedSegments = React.useMemo(() => {
     if (segments.length === 0) return [];
     const merged: (TranscriptSegment & { originalIndices: number[] })[] = [];
@@ -35,10 +37,10 @@ export default function TranscriptChat({ segments, interviewerSpeaker, activeSeg
   }, [segments]);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-96 text-text-secondary text-sm font-bold uppercase tracking-widest">加载转写中...</div>;
+    return <div className="flex items-center justify-center h-96 text-text-secondary text-sm font-bold uppercase tracking-widest">{t('loadingTranscript')}</div>;
   }
   if (segments.length === 0) {
-    return <div className="flex items-center justify-center h-96 text-text-secondary text-sm font-bold uppercase tracking-widest">暂无转写数据</div>;
+    return <div className="flex items-center justify-center h-96 text-text-secondary text-sm font-bold uppercase tracking-widest">{t('noTranscript')}</div>;
   }
 
   return (
@@ -46,7 +48,7 @@ export default function TranscriptChat({ segments, interviewerSpeaker, activeSeg
       {mergedSegments.map((seg, idx) => {
         const isInterviewer = seg.speaker === interviewerSpeaker;
         const isActive = activeSegmentIndex !== null && seg.originalIndices.includes(activeSegmentIndex);
-        const label = isInterviewer ? '面试官' : '候选人';
+        const label = isInterviewer ? t('interviewer') : t('candidate');
 
         return (
           <div
@@ -56,7 +58,7 @@ export default function TranscriptChat({ segments, interviewerSpeaker, activeSeg
           >
             {/* Avatar */}
             <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black text-white shadow-sm ${isInterviewer ? 'bg-text-secondary' : 'bg-emerald-500'}`}>
-              {isInterviewer ? '官' : '候'}
+              {isInterviewer ? t('interviewerShort') : t('candidateShort')}
             </div>
 
             {/* Bubble container */}

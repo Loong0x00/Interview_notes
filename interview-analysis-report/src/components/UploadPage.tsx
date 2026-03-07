@@ -1,7 +1,8 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Upload, FileAudio, FileText, CheckCircle, AlertCircle, Loader, Sun, Moon, ArrowLeft, XCircle } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useLang } from '../contexts/LanguageContext';
 
 interface UploadPageProps {
   onComplete: (reportName: string) => void;
@@ -22,14 +23,6 @@ type UploadMode = "audio" | "transcript";
 const AUDIO_ACCEPT_FORMATS = ".m4a,.mp3,.wav,.flac,.mp4,.aac,.ogg,.wma";
 const TRANSCRIPT_ACCEPT_FORMATS = ".txt,.json,.srt,.vtt,.docx";
 
-const AUDIO_STEPS = [
-  { key: "transcribing", label: "语音转写", num: 1 },
-  { key: "analyzing", label: "AI 分析", num: 2 },
-];
-
-const TRANSCRIPT_STEPS = [
-  { key: "analyzing", label: "AI 分析", num: 1 },
-];
 
 function getAudioStepIndex(status: string): number {
   if (status === "uploading") return -1;
@@ -55,6 +48,7 @@ function formatSize(bytes: number): string {
 export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
   const { authFetch, logout } = useAuth();
   const { theme, toggle: toggleTheme } = useTheme();
+  const { t } = useLang();
   const [mode, setMode] = useState<UploadMode>("audio");
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -72,7 +66,10 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
 
   const isLocked = uploading || (job !== null && job.status !== "error" && job.status !== "done");
 
-  const steps = mode === "audio" ? AUDIO_STEPS : TRANSCRIPT_STEPS;
+  const steps = useMemo(() => mode === "audio"
+    ? [{ key: "transcribing", label: t('stepTranscription'), num: 1 }, { key: "analyzing", label: t('stepAnalysis'), num: 2 }]
+    : [{ key: "analyzing", label: t('stepAnalysis'), num: 1 }]
+  , [mode, t]);
   const totalSteps = steps.length;
   const getStepIndex = mode === "audio" ? getAudioStepIndex : getTranscriptStepIndex;
   const acceptFormats = mode === "audio" ? AUDIO_ACCEPT_FORMATS : TRANSCRIPT_ACCEPT_FORMATS;
@@ -258,10 +255,10 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-text-secondary bg-bg-surface bento-shadow border border-border-main rounded-full hover:text-emerald-600 transition-all flex-shrink-0"
             >
               <ArrowLeft size={18} />
-              返回
+              {t('back')}
             </button>
             <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-emerald-500/20 flex-shrink-0">R</div>
-            <h1 className="hidden sm:block text-xl font-bold text-text-primary tracking-tight">上传面试</h1>
+            <h1 className="hidden sm:block text-xl font-bold text-text-primary tracking-tight">{t('uploadInterview')}</h1>
           </div>
           <div className="flex items-center gap-4">
             <button
@@ -271,7 +268,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
             >
               {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
             </button>
-            <button onClick={logout} className="text-sm text-text-secondary hover:text-text-primary transition-colors font-medium">退出登录</button>
+            <button onClick={logout} className="text-sm text-text-secondary hover:text-text-primary transition-colors font-medium">{t('logout')}</button>
           </div>
         </div>
       </header>
@@ -284,13 +281,13 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
             {/* JD Textarea */}
             <div className="bg-bg-surface rounded-3xl bento-shadow border border-border-main p-8 space-y-4">
               <div>
-                <h2 className="text-lg font-bold text-text-primary">岗位 JD</h2>
-                <p className="text-sm text-text-secondary mt-1">提供后将生成岗位画像与契合度</p>
+                <h2 className="text-lg font-bold text-text-primary">{t('jdTitle')}</h2>
+                <p className="text-sm text-text-secondary mt-1">{t('jdDesc')}</p>
               </div>
               <textarea
                 value={jdText}
                 onChange={(e) => { if (e.target.value.length <= 2000) setJdText(e.target.value); }}
-                placeholder="粘贴岗位描述..."
+                placeholder={t('jdPlaceholder')}
                 disabled={isLocked}
                 className={`w-full h-48 p-5 bg-bg-base border border-border-main rounded-2xl text-base text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all resize-none ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
               />
@@ -304,8 +301,8 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
             {/* CV Upload */}
             <div className="bg-bg-surface rounded-3xl bento-shadow border border-border-main p-8 space-y-4">
               <div>
-                <h2 className="text-lg font-bold text-text-primary">求职者简历</h2>
-                <p className="text-sm text-text-secondary mt-1">支持 PDF、Word 格式</p>
+                <h2 className="text-lg font-bold text-text-primary">{t('cvTitle')}</h2>
+                <p className="text-sm text-text-secondary mt-1">{t('cvDesc')}</p>
               </div>
               <div
                 onClick={() => !isLocked && cvInputRef.current?.click()}
@@ -322,7 +319,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                   <Upload className="w-6 h-6 text-text-secondary group-hover:text-emerald-600" />
                 </div>
                 <span className="text-sm font-bold text-text-secondary group-hover:text-text-primary">
-                  {cvFile ? cvFile.name : '点击选择简历'}
+                  {cvFile ? cvFile.name : t('cvSelect')}
                 </span>
               </div>
             </div>
@@ -331,20 +328,20 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
             {!job && (
               <div className="bg-bg-surface rounded-3xl bento-shadow border border-border-main p-8 space-y-4">
                 <div>
-                  <h2 className="text-lg font-bold text-text-primary">面试轮次</h2>
-                  <p className="text-sm text-text-secondary mt-1">选填，用于分类筛选</p>
+                  <h2 className="text-lg font-bold text-text-primary">{t('interviewRound')}</h2>
+                  <p className="text-sm text-text-secondary mt-1">{t('roundDesc')}</p>
                 </div>
                 <select
                   value={interviewType}
                   onChange={(e) => setInterviewType(e.target.value)}
                   className="w-full px-4 py-2 bg-bg-base border border-border-main rounded-full text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all appearance-none cursor-pointer"
                 >
-                  <option value="">未指定</option>
-                  <option value="一面">一面</option>
-                  <option value="二面">二面</option>
-                  <option value="三面">三面</option>
-                  <option value="HR面">HR面</option>
-                  <option value="终面">终面</option>
+                  <option value="">{t('roundNone')}</option>
+                  <option value="一面">{t('roundFirst')}</option>
+                  <option value="二面">{t('roundSecond')}</option>
+                  <option value="三面">{t('roundThird')}</option>
+                  <option value="HR面">{t('roundHR')}</option>
+                  <option value="终面">{t('roundFinal')}</option>
                 </select>
               </div>
             )}
@@ -365,7 +362,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                         : "text-text-secondary hover:text-text-primary"
                     }`}
                   >
-                    面试录音
+                    {t('modeAudio')}
                   </button>
                   <button
                     onClick={() => switchMode("transcript")}
@@ -375,12 +372,12 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                         : "text-text-secondary hover:text-text-primary"
                     }`}
                   >
-                    面试逐字稿
+                    {t('modeTranscript')}
                   </button>
                 </div>
                 {mode === "audio" && quotaMin !== null && (
                   <span className={`text-xs font-medium ${quotaMin <= 10 ? 'text-red-500' : 'text-text-tertiary'}`}>
-                    转写余量 {quotaMin >= 1440 ? '不限' : `${quotaMin} 分钟`}
+                    {t('quotaRemaining')} {quotaMin >= 1440 ? t('quotaUnlimited') : `${quotaMin} ${t('quotaMinutes')}`}
                   </span>
                 )}
               </div>
@@ -430,7 +427,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                       </p>
                     </div>
                     <p className="text-xs font-bold text-emerald-600 pt-2 uppercase tracking-wider">
-                      点击更换文件
+                      {t('changeFile')}
                     </p>
                   </div>
                 ) : (
@@ -440,10 +437,10 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                     </div>
                     <div className="space-y-2">
                       <p className="text-lg font-bold text-text-primary">
-                        {mode === "audio" ? "上传面试录音" : "上传逐字稿文件"}
+                        {mode === "audio" ? t('uploadAudio') : t('uploadTranscript')}
                       </p>
                       <p className="text-sm text-text-secondary max-w-[200px] mx-auto">
-                        拖拽文件到此处或点击选择开始 AI 分析
+                        {t('dropHint')}
                       </p>
                     </div>
                   </div>
@@ -453,7 +450,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
               {/* Progress Tracker Panel */}
               <div className="bg-bg-surface rounded-3xl p-8 flex flex-col justify-center space-y-6 bento-shadow border border-border-main">
                 <h3 className="text-base font-bold text-text-primary">
-                  处理进度
+                  {t('progressTitle')}
                 </h3>
                 <div className="space-y-6">
                   {steps.map((step, i) => {
@@ -520,14 +517,14 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                 {job && job.status !== "error" && job.status !== "done" && (
                   <div className="pt-4 border-t border-border-main space-y-3">
                     <p className="text-xs font-medium text-text-secondary truncate">
-                      正在处理：{file?.name || resumedFileName || ''}
+                      {t('processing')}{file?.name || resumedFileName || ''}
                     </p>
                     <button
                       onClick={cancelCurrentJob}
                       className="w-full py-2.5 text-xs font-bold bg-bg-base border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-all flex items-center justify-center gap-2"
                     >
                       <XCircle className="w-4 h-4" />
-                      终止任务
+                      {t('cancelTask')}
                     </button>
                   </div>
                 )}
@@ -537,7 +534,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                   <div className="p-5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50 rounded-2xl text-center shadow-sm">
                     <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
                     <p className="text-emerald-700 dark:text-emerald-300 font-bold text-sm">
-                      分析完成！正在进入报告...
+                      {t('analysisDone')}
                     </p>
                   </div>
                 )}
@@ -548,9 +545,9 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                     <div className="flex items-start gap-4">
                       <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-red-700 dark:text-red-300 font-bold text-sm">处理失败</p>
+                        <p className="text-red-700 dark:text-red-300 font-bold text-sm">{t('processFailed')}</p>
                         <p className="text-red-600 dark:text-red-400 text-xs mt-1 font-medium leading-relaxed">
-                          {job.error || "发生了未知错误"}
+                          {job.error || t('unknownError')}
                         </p>
                       </div>
                     </div>
@@ -564,7 +561,7 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                       }}
                       className="mt-4 w-full py-2.5 text-xs font-bold bg-white dark:bg-bg-surface border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-xl hover:bg-red-50 transition-all"
                     >
-                      重新尝试
+                      {t('retry')}
                     </button>
                   </div>
                 )}
@@ -585,16 +582,16 @@ export default function UploadPage({ onComplete, onBack }: UploadPageProps) {
                   {uploading ? (
                     <>
                       <Loader className="w-5 h-5 animate-spin" />
-                      正在上传
+                      {t('uploading')}
                     </>
                   ) : (
                     <>
-                      开始分析
+                      {t('startAnalysis')}
                       <CheckCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
                     </>
                   )}
                 </button>
-                <p className="text-xs text-text-tertiary">请确认信息无误后再提交，每次分析会消耗 AI 额度</p>
+                <p className="text-xs text-text-tertiary">{t('costWarning')}</p>
               </div>
             )}
           </div>
