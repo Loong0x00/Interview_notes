@@ -65,6 +65,14 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(report_name, tag)
   );
+
+  CREATE TABLE IF NOT EXISTS pipeline_cache (
+    content_hash TEXT NOT NULL,
+    cache_type TEXT NOT NULL,
+    source_report TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY(content_hash, cache_type)
+  );
 `);
 
 // ── Transcription quota migration ──
@@ -127,6 +135,12 @@ export function getTranscriptionQuotaMs(userId: number): number {
 export function deductTranscriptionQuota(userId: number, durationMs: number): void {
   db.prepare(
     "UPDATE users SET transcription_quota_ms = MAX(0, transcription_quota_ms - ?) WHERE id = ?"
+  ).run(durationMs, userId);
+}
+
+export function refundTranscriptionQuota(userId: number, durationMs: number): void {
+  db.prepare(
+    "UPDATE users SET transcription_quota_ms = transcription_quota_ms + ? WHERE id = ?"
   ).run(durationMs, userId);
 }
 
@@ -382,6 +396,21 @@ export function getAllTagsByUser(userId: number): string[] {
     "SELECT DISTINCT t.tag FROM report_tags t JOIN reports r ON t.report_name = r.name WHERE r.user_id = ? ORDER BY t.tag"
   ).all(userId) as { tag: string }[];
   return rows.map(r => r.tag);
+}
+
+// ── Pipeline cache helpers ──
+
+export function getCacheEntry(contentHash: string, cacheType: string): string | null {
+  const row = db
+    .prepare("SELECT source_report FROM pipeline_cache WHERE content_hash = ? AND cache_type = ?")
+    .get(contentHash, cacheType) as { source_report: string } | undefined;
+  return row?.source_report ?? null;
+}
+
+export function setCacheEntry(contentHash: string, cacheType: string, sourceReport: string): void {
+  db.prepare(
+    "INSERT OR REPLACE INTO pipeline_cache (content_hash, cache_type, source_report) VALUES (?, ?, ?)"
+  ).run(contentHash, cacheType, sourceReport);
 }
 
 export default db;

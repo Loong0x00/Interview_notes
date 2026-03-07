@@ -4,7 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { transcribe, type TranscriptSegment } from "./transcribe.js";
 import { formatTranscript, analyze } from "./analyze.js";
-import { registerReport, saveJob, getPersistedJob, getActiveJobs, deleteOldJobs, saveReportContext, setReportUploadTime, setReportOriginalFilename } from "./db.js";
+import { registerReport, saveJob, getPersistedJob, getActiveJobs, deleteOldJobs, saveReportContext, setReportUploadTime, setReportOriginalFilename, getCacheEntry, setCacheEntry, refundTranscriptionQuota } from "./db.js";
 import { parseTranscriptFile } from "./parseTranscript.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -90,6 +90,17 @@ function shortUuid(): string {
   return crypto.randomBytes(4).toString("hex");
 }
 
+/** Compute SHA-256 hash of a file's content */
+function hashFile(filePath: string): string {
+  const content = fs.readFileSync(filePath);
+  return crypto.createHash("sha256").update(content).digest("hex");
+}
+
+/** Compute SHA-256 hash of a string */
+function hashString(text: string): string {
+  return crypto.createHash("sha256").update(text, "utf-8").digest("hex");
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Shared analysis + register + cleanup
 // ═══════════════════════════════════════════════════════════════
@@ -116,13 +127,43 @@ async function runAnalysis(
   updateJob(job);
 
   const transcriptText = formatTranscript(segments).slice(0, 30000);
-  const jsonData = await analyze(transcriptText, context, (detail, percent) => {
-    job.progress = `${stepPrefix} AI 分析 - ${detail}`;
-    if (percent !== undefined) {
-      job.progressPercent = percent;
+
+  // Check analysis cache
+  const analysisCacheKey = hashString(transcriptText + "|||" + (context?.jdText || "") + "|||" + (context?.cvText || ""));
+  const cachedAnalysisReport = getCacheEntry(analysisCacheKey, "analysis");
+
+  let jsonData: any;
+
+  if (cachedAnalysisReport) {
+    const cachedAnalysisPath = path.join(DATA_DIR, `${cachedAnalysisReport}_analysis_data.json`);
+    if (fs.existsSync(cachedAnalysisPath)) {
+      console.log(`[Pipeline] Analysis cache hit: ${analysisCacheKey.slice(0, 12)}... → ${cachedAnalysisReport}`);
+      jsonData = JSON.parse(fs.readFileSync(cachedAnalysisPath, "utf-8"));
+
+      job.progress = `${stepPrefix} AI 分析 - 命中缓存 ✓`;
+      job.progressPercent = 100;
+      updateJob(job);
+    } else {
+      // Cached file gone, run analysis normally
+      jsonData = await analyze(transcriptText, context, (detail, percent) => {
+        job.progress = `${stepPrefix} AI 分析 - ${detail}`;
+        if (percent !== undefined) {
+          job.progressPercent = percent;
+        }
+        updateJob(job);
+      });
+      setCacheEntry(analysisCacheKey, "analysis", baseName);
     }
-    updateJob(job);
-  });
+  } else {
+    jsonData = await analyze(transcriptText, context, (detail, percent) => {
+      job.progress = `${stepPrefix} AI 分析 - ${detail}`;
+      if (percent !== undefined) {
+        job.progressPercent = percent;
+      }
+      updateJob(job);
+    });
+    setCacheEntry(analysisCacheKey, "analysis", baseName);
+  }
 
   fs.writeFileSync(analysisJsonPath, JSON.stringify(jsonData, null, 2), "utf-8");
   console.log(`[Pipeline] Saved analysis JSON: ${analysisJsonPath}`);
@@ -214,13 +255,41 @@ async function runReanalysis(
     updateJob(job);
 
     const transcriptText = formatTranscript(segments).slice(0, 30000);
-    const jsonData = await analyze(transcriptText, context, (detail, percent) => {
-      job.progress = `[1/1] AI 重新分析 - ${detail}`;
-      if (percent !== undefined) {
-        job.progressPercent = percent;
+
+    const analysisCacheKey = hashString(transcriptText + "|||" + (context?.jdText || "") + "|||" + (context?.cvText || ""));
+    const cachedAnalysisReport = getCacheEntry(analysisCacheKey, "analysis");
+
+    let jsonData: any;
+
+    if (cachedAnalysisReport) {
+      const cachedAnalysisPath = path.join(DATA_DIR, `${cachedAnalysisReport}_analysis_data.json`);
+      if (fs.existsSync(cachedAnalysisPath)) {
+        console.log(`[Pipeline] Reanalysis cache hit: ${analysisCacheKey.slice(0, 12)}... → ${cachedAnalysisReport}`);
+        jsonData = JSON.parse(fs.readFileSync(cachedAnalysisPath, "utf-8"));
+
+        job.progress = "[1/1] AI 重新分析 - 命中缓存 ✓";
+        job.progressPercent = 100;
+        updateJob(job);
+      } else {
+        jsonData = await analyze(transcriptText, context, (detail, percent) => {
+          job.progress = `[1/1] AI 重新分析 - ${detail}`;
+          if (percent !== undefined) {
+            job.progressPercent = percent;
+          }
+          updateJob(job);
+        });
+        setCacheEntry(analysisCacheKey, "analysis", reportName);
       }
-      updateJob(job);
-    });
+    } else {
+      jsonData = await analyze(transcriptText, context, (detail, percent) => {
+        job.progress = `[1/1] AI 重新分析 - ${detail}`;
+        if (percent !== undefined) {
+          job.progressPercent = percent;
+        }
+        updateJob(job);
+      });
+      setCacheEntry(analysisCacheKey, "analysis", reportName);
+    }
 
     const analysisJsonPath = path.join(DATA_DIR, `${reportName}_analysis_data.json`);
     fs.writeFileSync(analysisJsonPath, JSON.stringify(jsonData, null, 2), "utf-8");
@@ -249,7 +318,7 @@ async function runReanalysis(
 // Audio pipeline (transcribe + analyze)
 // ═══════════════════════════════════════════════════════════════
 
-export function startPipeline(audioPath: string, originalFileName: string, userId?: number, context?: PipelineContext): string {
+export function startPipeline(audioPath: string, originalFileName: string, userId?: number, context?: PipelineContext, audioDurationMs?: number): string {
   const id = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const job: PipelineJob = {
     id,
@@ -263,7 +332,7 @@ export function startPipeline(audioPath: string, originalFileName: string, userI
   saveJob(job);
 
   // Run async pipeline - don't await
-  runPipeline(job, audioPath, originalFileName, context).catch((err) => {
+  runPipeline(job, audioPath, originalFileName, context, audioDurationMs).catch((err) => {
     console.error(`[Pipeline] Job ${id} failed:`, err);
     job.status = "error";
     job.error = err.message || String(err);
@@ -274,29 +343,63 @@ export function startPipeline(audioPath: string, originalFileName: string, userI
   return id;
 }
 
+async function doTranscription(job: PipelineJob, audioPath: string): Promise<TranscriptSegment[]> {
+  job.status = "transcribing";
+  job.progress = "[1/2] 语音转写 - 上传中...";
+  job.progressPercent = 5;
+  updateJob(job);
+
+  return transcribe(audioPath, (stage, detail, percent) => {
+    job.progress = `[1/2] 语音转写 - ${detail || stage}`;
+    if (percent !== undefined) {
+      job.progressPercent = percent;
+    }
+    updateJob(job);
+  });
+}
+
 async function runPipeline(
   job: PipelineJob,
   audioPath: string,
   originalFileName: string,
-  context?: PipelineContext
+  context?: PipelineContext,
+  audioDurationMs?: number
 ): Promise<void> {
   const fileBase = path.basename(originalFileName, path.extname(originalFileName));
   const baseName = `${fileBase}_${shortUuid()}`;
 
   try {
-    // Step 1: Transcribe
-    job.status = "transcribing";
-    job.progress = "[1/2] 语音转写 - 上传中...";
-    job.progressPercent = 5;
-    updateJob(job);
+    // Check transcription cache
+    const audioHash = hashFile(audioPath);
+    const cachedTranscriptReport = getCacheEntry(audioHash, "transcription");
 
-    const segments = await transcribe(audioPath, (stage, detail, percent) => {
-      job.progress = `[1/2] 语音转写 - ${detail || stage}`;
-      if (percent !== undefined) {
-        job.progressPercent = percent;
+    let segments: TranscriptSegment[];
+
+    if (cachedTranscriptReport) {
+      const cachedPath = path.join(DATA_DIR, `${cachedTranscriptReport}_transcript.json`);
+      if (fs.existsSync(cachedPath)) {
+        console.log(`[Pipeline] Transcription cache hit: ${audioHash.slice(0, 12)}... → ${cachedTranscriptReport}`);
+        segments = JSON.parse(fs.readFileSync(cachedPath, "utf-8"));
+
+        // Refund transcription quota since we didn't use the API
+        if (job.userId && audioDurationMs) {
+          refundTranscriptionQuota(job.userId, audioDurationMs);
+          console.log(`[Pipeline] Refunded ${Math.round(audioDurationMs / 1000)}s transcription quota to user ${job.userId}`);
+        }
+
+        job.status = "transcribing";
+        job.progress = "[1/2] 语音转写 - 命中缓存 ✓";
+        job.progressPercent = 100;
+        updateJob(job);
+      } else {
+        // Cached file gone, fall through to normal transcription
+        segments = await doTranscription(job, audioPath);
+        setCacheEntry(audioHash, "transcription", baseName);
       }
-      updateJob(job);
-    });
+    } else {
+      segments = await doTranscription(job, audioPath);
+      setCacheEntry(audioHash, "transcription", baseName);
+    }
 
     await runAnalysis(job, baseName, segments, audioPath, "[2/2]", context);
   } catch (err: any) {

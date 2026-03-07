@@ -417,7 +417,7 @@ app.post("/api/pipeline/start", requireAuth, audioUpload.fields([{ name: "audio"
   }
 
   console.log(`[API] Pipeline start: ${originalName} -> ${audioPath}${context.jdText ? " [+JD]" : ""}${context.cvText ? " [+CV]" : ""}`);
-  const jobId = startPipeline(audioPath, originalName, userId, Object.keys(context).length > 0 ? context : undefined);
+  const jobId = startPipeline(audioPath, originalName, userId, Object.keys(context).length > 0 ? context : undefined, audioDurationMs);
 
   res.json({ jobId });
 });
