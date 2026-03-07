@@ -4,7 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { transcribe, type TranscriptSegment } from "./transcribe.js";
 import { formatTranscript, analyze } from "./analyze.js";
-import { registerReport, saveJob, getPersistedJob, getActiveJobs, deleteOldJobs, saveReportContext, setReportUploadTime, setReportOriginalFilename, getCacheEntry, setCacheEntry, refundTranscriptionQuota } from "./db.js";
+import { registerReport, saveJob, getPersistedJob, getActiveJobs, deleteOldJobs, saveReportContext, setReportUploadTime, setReportOriginalFilename, getCacheEntry, setCacheEntry } from "./db.js";
 import { parseTranscriptFile } from "./parseTranscript.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -380,12 +380,6 @@ async function runPipeline(
       if (fs.existsSync(cachedPath)) {
         console.log(`[Pipeline] Transcription cache hit: ${audioHash.slice(0, 12)}... → ${cachedTranscriptReport}`);
         segments = JSON.parse(fs.readFileSync(cachedPath, "utf-8"));
-
-        // Refund transcription quota since we didn't use the API
-        if (job.userId && audioDurationMs) {
-          refundTranscriptionQuota(job.userId, audioDurationMs);
-          console.log(`[Pipeline] Refunded ${Math.round(audioDurationMs / 1000)}s transcription quota to user ${job.userId}`);
-        }
 
         job.status = "transcribing";
         job.progress = "[1/2] 语音转写 - 完成";
